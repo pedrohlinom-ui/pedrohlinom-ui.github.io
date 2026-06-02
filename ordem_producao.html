@@ -241,7 +241,7 @@ const state={dia:null,filter:'todos',estoques:{},importedKeys:new Set()};
 const DIAS={seg:'A',ter:'B',qua:'A',qui:'B',sex:'A',sab:'B'};
 const NOMES_DIA={seg:'Segunda-feira',ter:'Terça-feira',qua:'Quarta-feira',qui:'Quinta-feira',sex:'Sexta-feira',sab:'Sábado'};
 
-function normalize(s){return(s||'').toString().trim().toUpperCase().replace(/\s+/g,' ');}
+function normalize(s){return(s||'').toString().replace(/[\r\n\t]/g,' ').trim().toUpperCase().replace(/\s+/g,' ');}
 
 function parseCSV(text){
   const rows=[];const lines=text.split('\n');
@@ -321,8 +321,11 @@ async function importarSheets(){
     if(rows.length<2)throw new Error('Planilha sem respostas.');
 
     const header=rows[0].map(normalize);
+    // Debug: log primeiras linhas e colunas
+    console.log('CSV primeiras 3 linhas:', rows.slice(0,3).map(r=>r.slice(0,5)));
+    console.log('Header normalizado:', header.slice(0,6));
     const colLoja=header.findIndex(h=>h==='LOJA'||h.includes('LOJA')||h==='COLUNA 2'||h.includes('COLUNA 2'));
-    if(colLoja===-1)throw new Error('Coluna de loja não encontrada. Colunas: '+header.slice(0,5).join(', '));
+    if(colLoja===-1)throw new Error('Colunas encontradas: '+header.slice(0,6).join(' | '));
 
     // Build item→colIndex map
     const itemColMap={};
