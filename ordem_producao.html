@@ -241,22 +241,30 @@ const state={dia:null,filter:'todos',estoques:{},importedKeys:new Set()};
 const DIAS={seg:'A',ter:'B',qua:'A',qui:'B',sex:'A',sab:'B'};
 const NOMES_DIA={seg:'Segunda-feira',ter:'Terça-feira',qua:'Quarta-feira',qui:'Quinta-feira',sex:'Sexta-feira',sab:'Sábado'};
 
-function normalize(s){return(s||'').toString().replace(/[\r\n\t]/g,' ').trim().toUpperCase().replace(/\s+/g,' ');}
+function normalize(s){return(s||'').toString().replace(/[\r\n\t\u00a0]/g,' ').replace(/\s+/g,' ').trim().toUpperCase();}
 
 function parseCSV(text){
-  const rows=[];const lines=text.split('\n');
-  for(const line of lines){
-    if(!line.trim())continue;
-    const cols=[];let cur='',inQ=false;
-    for(let i=0;i<line.length;i++){
-      const c=line[i];
-      if(c==='"'){inQ=!inQ;continue;}
-      if(c===','&&!inQ){cols.push(cur);cur='';continue;}
-      cur+=c;
+  // Parser RFC 4180 que lida com quebras de linha dentro de campos entre aspas
+  const rows=[];
+  let row=[],cur='',inQ=false,i=0;
+  text=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  while(i<text.length){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'&&text[i+1]==='"'){cur+='"';i+=2;continue;}
+      if(c==='"'){inQ=false;i++;continue;}
+      cur+=c;i++;continue;
     }
-    cols.push(cur);
-    rows.push(cols.map(s=>s.trim().replace(/^"|"$/g,'')));
+    if(c==='"'){inQ=true;i++;continue;}
+    if(c===','){row.push(cur.trim());cur='';i++;continue;}
+    if(c==='\n'){
+      row.push(cur.trim());
+      if(row.some(v=>v!==''))rows.push(row);
+      row=[];cur='';i++;continue;
+    }
+    cur+=c;i++;
   }
+  if(cur||row.length){row.push(cur.trim());if(row.some(v=>v!==''))rows.push(row);}
   return rows;
 }
 
@@ -334,7 +342,10 @@ async function importarSheets(){
       header.forEach((h,i)=>{
         if(i<=3)return;
         const hc=h.replace(/\s*\[.*?\]\s*/g,'').trim();
-        if(hc===n||(n.length>6&&hc.includes(n))||(hc.length>6&&n.includes(hc))){
+        // Remove espaços extras e compara
+        const hcClean=hc.replace(/\s+/g,' ').trim();
+        const nClean=n.replace(/\s+/g,' ').trim();
+        if(hcClean===nClean||(nClean.length>6&&hcClean.includes(nClean))||(hcClean.length>6&&nClean.includes(hcClean))){
           if(!itemColMap[it.nome])itemColMap[it.nome]=i;
         }
       });
