@@ -70,6 +70,13 @@ tr:hover td{background:#fafaf8}
 .btn-primary:hover{background:#0F6E56}
 .btn-secondary{padding:8px 18px;border-radius:8px;border:1px solid #ddd;background:transparent;color:#1a1a1a;font-size:13px;cursor:pointer}
 .btn-secondary:hover{background:#f4f4f0}
+.btn-azul{padding:8px 18px;border-radius:8px;border:1px solid #185FA5;background:#185FA5;color:#fff;font-size:13px;font-weight:500;cursor:pointer}
+.btn-azul:hover{background:#0f4a8a}
+.transf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:1rem}
+.transf-card{border:1px solid #C3D9F5;border-radius:10px;padding:12px;background:#fff}
+.transf-card-nome{font-size:12px;font-weight:500;margin-bottom:6px}
+.transf-card-detail{font-size:11px;color:#666;margin-bottom:2px}
+.transf-card-qtd{font-size:18px;font-weight:500;color:#185FA5;margin-top:4px}
 .empty{padding:2rem;text-align:center;color:#aaa;font-size:13px}
 .ordem-card{border:1px solid #e5e5e0;border-radius:10px;padding:12px;background:#fff}
 .ordem-card-nome{font-size:12px;font-weight:500;margin-bottom:6px}
@@ -81,7 +88,6 @@ tr:hover td{background:#fafaf8}
 </style>
 </head>
 <body>
-
 <div class="header">
   <div style="display:flex;align-items:center;gap:12px">
     <div class="logo"><i class="ti ti-bread"></i></div>
@@ -96,12 +102,11 @@ tr:hover td{background:#fafaf8}
     <span class="badge badge-ab">AB — Todo dia</span>
   </div>
 </div>
-
 <div class="tab-bar">
   <div class="tab active" onclick="switchTab('entrada')">Lançamento de estoque</div>
   <div class="tab" onclick="switchTab('ordem')">Ordem de produção</div>
+  <div class="tab" onclick="switchTab('regina')">Transferência Regina</div>
 </div>
-
 <div id="tab-entrada">
   <div class="day-selector">
     <span>Dia de amanhã:</span>
@@ -112,7 +117,6 @@ tr:hover td{background:#fafaf8}
     <button class="day-btn" onclick="selectDay('sex')" id="btn-sex">Sexta (A)</button>
     <button class="day-btn" onclick="selectDay('sab')" id="btn-sab">Sábado (B)</button>
   </div>
-
   <div class="import-bar">
     <i class="ti ti-table-import" style="font-size:16px;color:#1D9E75;flex-shrink:0"></i>
     <span id="import-desc">Selecione o dia para importar os estoques do Google Forms</span>
@@ -121,30 +125,26 @@ tr:hover td{background:#fafaf8}
       <i class="ti ti-brand-google"></i> Importar do Forms
     </button>
   </div>
-
   <div class="loja-status" id="loja-status" style="display:none">
     <span style="font-size:11px;color:#666">Respostas encontradas:</span>
     <span id="status-mil" class="loja-tag loja-none"><i class="ti ti-clock" style="font-size:12px"></i> Milionários: aguardando</span>
     <span id="status-reg" class="loja-tag loja-none"><i class="ti ti-clock" style="font-size:12px"></i> Regina: aguardando</span>
   </div>
-
   <div class="stats-bar">
     <div class="stat"><div class="stat-label">Itens na lista</div><div class="stat-value" id="stat-total">—</div></div>
     <div class="stat"><div class="stat-label">A produzir</div><div class="stat-value" id="stat-prod" style="color:#1D9E75">—</div></div>
     <div class="stat"><div class="stat-label">Zerados</div><div class="stat-value" id="stat-zero">—</div></div>
     <div class="stat"><div class="stat-label">Receitas totais</div><div class="stat-value" id="stat-rec" style="color:#185FA5">—</div></div>
   </div>
-
   <div class="search-bar">
     <i class="ti ti-search" style="color:#aaa;font-size:16px"></i>
     <input type="text" id="search-input" placeholder="Buscar item..." oninput="renderTable()">
     <div class="filter-btns">
-      <button class="filter-btn active" onclick="setFilter('todos')" id="f-todos">Todos</button>
-      <button class="filter-btn" onclick="setFilter('produzir')" id="f-produzir">A produzir</button>
-      <button class="filter-btn" onclick="setFilter('zerado')" id="f-zerado">Zerados</button>
+      <button class="filter-btn active" onclick="setFilter(' + "'todos'" + ')" id="f-todos">Todos</button>
+      <button class="filter-btn" onclick="setFilter(' + "'produzir'" + ')" id="f-produzir">A produzir</button>
+      <button class="filter-btn" onclick="setFilter(' + "'zerado'" + ')" id="f-zerado">Zerados</button>
     </div>
   </div>
-
   <div class="table-wrap">
     <table>
       <thead>
@@ -164,13 +164,12 @@ tr:hover td{background:#fafaf8}
       <i class="ti ti-mood-empty" style="font-size:24px;display:block;margin-bottom:8px"></i>Nenhum item encontrado
     </div>
   </div>
-
   <div class="footer">
     <button class="btn-secondary" onclick="resetEstoques()"><i class="ti ti-refresh"></i> Limpar estoques</button>
     <button class="btn-primary" onclick="gerarOrdem()"><i class="ti ti-file-check"></i> Gerar ordem de produção</button>
+    <button class="btn-azul" onclick="gerarTransferencia()"><i class="ti ti-arrow-right"></i> Transferência Regina</button>
   </div>
 </div>
-
 <div id="tab-ordem" style="display:none">
   <div>
     <div id="ordem-vazia" style="text-align:center;padding:3rem;color:#aaa">
@@ -196,22 +195,38 @@ tr:hover td{background:#fafaf8}
     </div>
   </div>
 </div>
-
+<div id="tab-regina" style="display:none">
+  <div style="padding:1rem 1.5rem">
+    <div id="regina-vazia" style="text-align:center;padding:3rem;color:#aaa">
+      <i class="ti ti-arrow-right" style="font-size:32px;display:block;margin-bottom:8px"></i>
+      <p style="font-size:13px">Lance os estoques e clique em "Transferência Regina"</p>
+    </div>
+    <div id="regina-content" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:15px;font-weight:500" id="regina-titulo"></div>
+          <div style="font-size:12px;color:#666" id="regina-subtitulo"></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-primary" onclick="window.print()"><i class="ti ti-printer"></i> Imprimir</button>
+        </div>
+      </div>
+      <div id="regina-grid" class="transf-grid"></div>
+      <div style="margin-top:1rem;padding:10px 14px;background:#E6F1FB;border-radius:8px;font-size:12px;color:#185FA5;font-weight:500" id="regina-total"></div>
+    </div>
+  </div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const SHEETS = {
   A: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQMpIMNrwamdsvnZv5hU44IxBCCMLVr_oyAskByRbrodJXBK3cA8AvThNzeWGHFYXYVhyTGD4tWl8hS/pub?gid=1846755844&single=true&output=csv',
   B: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdHfGCx3lO7odzBrZI-rroQQYpKf2m06XW2NWs2UgVxo5D2_P3ga1ihLHiUvkqC-W5wMv2Vg0uOGK0/pub?gid=755405955&single=true&output=csv'
 };
-
 const ITEMS = [{"cod":"505","nome":"BISC. C/ QUEIJO KG","ideal_mil":9,"ideal_reg":0,"rende":9,"lista":"AB"},{"cod":"1570","nome":"BISC. FRITO DOCE KG","ideal_mil":20,"ideal_reg":0,"rende":39,"lista":"AB"},{"cod":"681","nome":"BISC.PALITO DE QUEIJO KG","ideal_mil":31,"ideal_reg":20,"rende":51,"lista":"A"},{"cod":"2215","nome":"BISCOITO DA VOVO KG","ideal_mil":20,"ideal_reg":0,"rende":40,"lista":"AB"},{"cod":"1940","nome":"BOLO BEM CASADO KG","ideal_mil":3,"ideal_reg":2,"rende":5,"lista":"A"},{"cod":"2175","nome":"BOLO BRIGADEIRO 420G","ideal_mil":6,"ideal_reg":3,"rende":18,"lista":"A"},{"cod":"2206","nome":"BOLO CENOURA CHOC. 390G","ideal_mil":7,"ideal_reg":4,"rende":11,"lista":"AB"},{"cod":"474","nome":"BOLO COCO 350G","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"476","nome":"BOLO DE ABACAXI 350G","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"364","nome":"BOLO DE AIPIM 350G","ideal_mil":6,"ideal_reg":4,"rende":20,"lista":"A"},{"cod":"475","nome":"BOLO DE BAUNILHA 350G","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"409","nome":"BOLO DE CENOURA 350G","ideal_mil":3,"ideal_reg":2,"rende":5,"lista":"A"},{"cod":"2155","nome":"BOLO DE CENOURA C/GOTAS DE CHOCO.","ideal_mil":3,"ideal_reg":2,"rende":10,"lista":"A"},{"cod":"366","nome":"BOLO DE CHOCOLATE 350G","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"429","nome":"BOLO DE CHURROS KG","ideal_mil":3,"ideal_reg":1,"rende":4,"lista":"A"},{"cod":"414","nome":"BOLO DE IOGURTE 450G","ideal_mil":12,"ideal_reg":12,"rende":12,"lista":"A"},{"cod":"410","nome":"BOLO DE LARANJA 350G","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"3440","nome":"BOLO DE LIMAO 350G","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"1259","nome":"BOLO DUPLO CHOCOLATE 150G","ideal_mil":6,"ideal_reg":6,"rende":12,"lista":"A"},{"cod":"420","nome":"BOLO FARINHA MILHO","ideal_mil":10,"ideal_reg":5,"rende":10,"lista":"B"},{"cod":"367","nome":"BOLO FORMIGUEIRO 350G","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"598","nome":"BOLO MESCLADO CATALAO 350G","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"1912","nome":"BOLO NEUTRO 350G","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"9269","nome":"BOLO PAMONHA KG","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"29","nome":"BOLO RED VELVET KG","ideal_mil":6,"ideal_reg":6,"rende":24,"lista":"A"},{"cod":"264","nome":"BOMBINHA CATALAO 200G","ideal_mil":13,"ideal_reg":8,"rende":21,"lista":"AB"},{"cod":"700","nome":"BREVIDADE BJD COM 2 UNI","ideal_mil":5,"ideal_reg":4,"rende":9,"lista":"B"},{"cod":"231","nome":"BRIGADEIRO 100G","ideal_mil":10,"ideal_reg":4,"rende":29,"lista":"A"},{"cod":"368","nome":"BROA CARIOCA 120G","ideal_mil":8,"ideal_reg":2,"rende":20,"lista":"B"},{"cod":"2183","nome":"BROA COCO E QUEIJO 390G","ideal_mil":4,"ideal_reg":3,"rende":7,"lista":"AB"},{"cod":"363","nome":"BROA DE FUBA 200G","ideal_mil":6,"ideal_reg":6,"rende":24,"lista":"B"},{"cod":"2210","nome":"BROA DE FUBA 450G","ideal_mil":2,"ideal_reg":3,"rende":10,"lista":"B"},{"cod":"3537","nome":"BROINHA MINEIRA 170G","ideal_mil":5,"ideal_reg":5,"rende":10,"lista":"B"},{"cod":"484","nome":"BROINHA DE CANJICA 130G","ideal_mil":6,"ideal_reg":2,"rende":16,"lista":"A"},{"cod":"1617","nome":"CAPONATA 200G","ideal_mil":4,"ideal_reg":5,"rende":18,"lista":"B"},{"cod":"1073","nome":"COOKIES AMERICANO 250G","ideal_mil":9,"ideal_reg":6,"rende":15,"lista":"B"},{"cod":"","nome":"COXINHA FRANGO 200G","ideal_mil":46,"ideal_reg":0,"rende":46,"lista":"B"},{"cod":"2189","nome":"CREME DE PRESTIGIO 200G","ideal_mil":5,"ideal_reg":4,"rende":19,"lista":"B"},{"cod":"","nome":"CROQUETE PRESUNTO E QUEIJO UN","ideal_mil":16,"ideal_reg":0,"rende":45,"lista":"B"},{"cod":"303","nome":"DOCE CAJUZINHO 100G","ideal_mil":11,"ideal_reg":4,"rende":15,"lista":"A"},{"cod":"274","nome":"DOCE DE BEIJINHO 100G","ideal_mil":13,"ideal_reg":4,"rende":17,"lista":"A"},{"cod":"208","nome":"DONNUTS 100G","ideal_mil":4,"ideal_reg":4,"rende":16,"lista":"A"},{"cod":"2598","nome":"EMPADA DE FRANGO 450G","ideal_mil":8,"ideal_reg":4,"rende":12,"lista":"B"},{"cod":"1832","nome":"EMPADA DE FRANGO 80G","ideal_mil":20,"ideal_reg":0,"rende":20,"lista":"B"},{"cod":"1664","nome":"ENROLAD.DE MORTADELA KG","ideal_mil":5,"ideal_reg":6,"rende":22,"lista":"A"},{"cod":"","nome":"ENROLADO SALSICHA 170G","ideal_mil":50,"ideal_reg":0,"rende":50,"lista":"B"},{"cod":"5598","nome":"ESFIRRA DE CARNE 120G","ideal_mil":8,"ideal_reg":2,"rende":10,"lista":"A"},{"cod":"2208","nome":"GRISSINI PARMESAO C/ PIMENTA CALABRESA KG","ideal_mil":9,"ideal_reg":6,"rende":15,"lista":"B"},{"cod":"2167","nome":"GRISSINI PARMESAO KG","ideal_mil":9,"ideal_reg":6,"rende":15,"lista":"B"},{"cod":"1826","nome":"HAMBURGAO 210G","ideal_mil":13,"ideal_reg":2,"rende":15,"lista":"A"},{"cod":"","nome":"KIBE COM QUEIJO 200G","ideal_mil":4,"ideal_reg":0,"rende":50,"lista":"B"},{"cod":"1693","nome":"MARIA MOLE 140G","ideal_mil":5,"ideal_reg":4,"rende":18,"lista":"B"},{"cod":"1592","nome":"MINGAU DE MILHO 270G","ideal_mil":4,"ideal_reg":3,"rende":14,"lista":"A"},{"cod":"2008","nome":"MINI LANCHINHO KG","ideal_mil":51,"ideal_reg":0,"rende":102,"lista":"B"},{"cod":"619","nome":"MINI PIZZA","ideal_mil":11,"ideal_reg":6,"rende":30,"lista":"A"},{"cod":"9675","nome":"MINI PIZZA CATALÃO BDJ","ideal_mil":15,"ideal_reg":15,"rende":15,"lista":"A"},{"cod":"1662","nome":"MINI PUDIM CATALAO 120G","ideal_mil":6,"ideal_reg":6,"rende":12,"lista":"A"},{"cod":"2008","nome":"MINI SANDUICHE ENROLADO KG","ideal_mil":51,"ideal_reg":51,"rende":102,"lista":"A"},{"cod":"1518","nome":"PACOCA 80G","ideal_mil":6,"ideal_reg":5,"rende":11,"lista":"B"},{"cod":"262","nome":"PAO CASEIRINHO CATALAO 250G","ideal_mil":11,"ideal_reg":8,"rende":42,"lista":"AB"},{"cod":"2176","nome":"PAO CASEIRO C/ CREME KG","ideal_mil":12,"ideal_reg":8,"rende":20,"lista":"AB"},{"cod":"405","nome":"PAO CASEIRO KG","ideal_mil":12,"ideal_reg":8,"rende":20,"lista":"AB"},{"cod":"2209","nome":"PAO CEBOLINHA 250G","ideal_mil":12,"ideal_reg":10,"rende":22,"lista":"B"},{"cod":"261","nome":"PAO DE BATATA CATALAO 250G","ideal_mil":80,"ideal_reg":30,"rende":42,"lista":"AB"},{"cod":"404","nome":"PAO DE BATATA KG","ideal_mil":35,"ideal_reg":35,"rende":70,"lista":"AB"},{"cod":"263","nome":"PAO DE CEBOLA CATALAO 250G","ideal_mil":30,"ideal_reg":20,"rende":24,"lista":"A"},{"cod":"841","nome":"PAO DE CENOURA CATALAO 250G","ideal_mil":24,"ideal_reg":18,"rende":21,"lista":"A"},{"cod":"361","nome":"PAO DE HAMBURGUER 300G","ideal_mil":10,"ideal_reg":4,"rende":14,"lista":"AB"},{"cod":"9866","nome":"PAO DE HOT DOG 500G","ideal_mil":10,"ideal_reg":6,"rende":16,"lista":"AB"},{"cod":"269","nome":"PAO DE LEITE CATALAO 250G","ideal_mil":23,"ideal_reg":15,"rende":19,"lista":"A"},{"cod":"2185","nome":"PAO DE LEITE NINHO CATALAO 130G","ideal_mil":5,"ideal_reg":5,"rende":20,"lista":"B"},{"cod":"1870","nome":"PAO DE LO 200G","ideal_mil":6,"ideal_reg":6,"rende":12,"lista":"B"},{"cod":"517","nome":"PAO DE MANDIOCA 250G","ideal_mil":9,"ideal_reg":6,"rende":30,"lista":"B"},{"cod":"1616","nome":"PAO DE MEL KG","ideal_mil":55,"ideal_reg":50,"rende":105,"lista":"B"},{"cod":"2207","nome":"PAO DE MILHO C/ ERVA DOCE 250G","ideal_mil":9,"ideal_reg":9,"rende":18,"lista":"B"},{"cod":"1594","nome":"PAO DE MILHO KG","ideal_mil":20,"ideal_reg":12,"rende":64,"lista":"AB"},{"cod":"382","nome":"PAO DE MINUTO 100G","ideal_mil":6,"ideal_reg":6,"rende":24,"lista":"B"},{"cod":"2546","nome":"PAO DOCE C/ COCO KG","ideal_mil":30,"ideal_reg":15,"rende":30,"lista":"AB"},{"cod":"2549","nome":"PAO DOCE REDONDO KG","ideal_mil":30,"ideal_reg":15,"rende":30,"lista":"AB"},{"cod":"8090","nome":"PAO FRANCES CONGELADO KG","ideal_mil":8,"ideal_reg":4,"rende":569,"lista":"A"},{"cod":"1084","nome":"PAO SIRIO 100G","ideal_mil":7,"ideal_reg":5,"rende":24,"lista":"B"},{"cod":"9868","nome":"PAO SOVADO 500G","ideal_mil":8,"ideal_reg":6,"rende":14,"lista":"B"},{"cod":"2597","nome":"PASTEL DE FRANGO 320G","ideal_mil":8,"ideal_reg":4,"rende":12,"lista":"B"},{"cod":"","nome":"PASTEL FEIRA CARNE","ideal_mil":96,"ideal_reg":0,"rende":24,"lista":"A"},{"cod":"","nome":"PASTEL FEIRA PIZZA","ideal_mil":72,"ideal_reg":0,"rende":24,"lista":"A"},{"cod":"","nome":"PASTEL FEIRA QUEIJO","ideal_mil":96,"ideal_reg":0,"rende":24,"lista":"A"},{"cod":"","nome":"PASTEL PORTUGUES CARNE 170G","ideal_mil":8,"ideal_reg":0,"rende":8,"lista":"B"},{"cod":"1202","nome":"PATE DE FRANGO 200G","ideal_mil":4,"ideal_reg":4,"rende":16,"lista":"B"},{"cod":"1523","nome":"PE DE MOLEQUE 150G","ideal_mil":8,"ideal_reg":4,"rende":6,"lista":"B"},{"cod":"388","nome":"PUDIM DE LEITE 700G","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"2551","nome":"PÃO DOCE C/ ACUCAR KG","ideal_mil":30,"ideal_reg":15,"rende":30,"lista":"AB"},{"cod":"2553","nome":"PÃO DOCE C/ CREME KG","ideal_mil":30,"ideal_reg":15,"rende":30,"lista":"AB"},{"cod":"2552","nome":"PÃO DOCE C/ QUEIJO KG","ideal_mil":30,"ideal_reg":15,"rende":30,"lista":"AB"},{"cod":"2550","nome":"PÃO DOCE COMPRIDO KG","ideal_mil":30,"ideal_reg":15,"rende":30,"lista":"AB"},{"cod":"390","nome":"QUEIJADINHA BJD COM 2 UNID","ideal_mil":4,"ideal_reg":2,"rende":12,"lista":"B"},{"cod":"1780","nome":"ROCAMBOLE DOCE DE LEITE KG","ideal_mil":14,"ideal_reg":10,"rende":16,"lista":"A"},{"cod":"2174","nome":"ROSCA CASEIRA C/ CREME KG","ideal_mil":12,"ideal_reg":8,"rende":10,"lista":"B"},{"cod":"413","nome":"ROSCA CASEIRA KG","ideal_mil":8,"ideal_reg":4,"rende":24,"lista":"B"},{"cod":"478","nome":"ROSCA DE BATATA KG","ideal_mil":6,"ideal_reg":4,"rende":31,"lista":"AB"},{"cod":"265","nome":"ROSCA DE COCO 300G","ideal_mil":12,"ideal_reg":8,"rende":40,"lista":"A"},{"cod":"1245","nome":"ROSCA DE CREME C/CHOCOLATE 300G","ideal_mil":4,"ideal_reg":4,"rende":8,"lista":"A"},{"cod":"2181","nome":"ROSCA DE LARANJA KG","ideal_mil":7,"ideal_reg":6,"rende":26,"lista":"A"},{"cod":"6985","nome":"ROSCA DE LEITE KG","ideal_mil":15,"ideal_reg":6,"rende":21,"lista":"B"},{"cod":"219","nome":"ROSCA DE NATA 250G","ideal_mil":35,"ideal_reg":20,"rende":25,"lista":"B"},{"cod":"7070","nome":"ROSCA SALGADA KG","ideal_mil":6,"ideal_reg":2,"rende":16,"lista":"A"},{"cod":"501","nome":"SAMANTILHA CATALAO 170G","ideal_mil":3,"ideal_reg":3,"rende":12,"lista":"AB"},{"cod":"5599","nome":"SANDUICHE BAURU 100G","ideal_mil":4,"ideal_reg":2,"rende":6,"lista":"A"},{"cod":"1843","nome":"SANDUICHE NATURAL 170G","ideal_mil":8,"ideal_reg":4,"rende":12,"lista":"B"},{"cod":"1572","nome":"SONHO DOCE LEITE 90G","ideal_mil":11,"ideal_reg":4,"rende":15,"lista":"A"},{"cod":"1831","nome":"TORTINHA DE FRANGO 150G","ideal_mil":11,"ideal_reg":4,"rende":15,"lista":"B"}];
-
 const state={dia:null,filter:'todos',estoques:{},importedKeys:new Set()};
 const DIAS={seg:'A',ter:'B',qua:'A',qui:'B',sex:'A',sab:'B'};
 const NOMES_DIA={seg:'Segunda-feira',ter:'Terça-feira',qua:'Quarta-feira',qui:'Quinta-feira',sex:'Sexta-feira',sab:'Sábado'};
-
 function normalize(s){return(s||'').toString().trim().toUpperCase().replace(/\s+/g,' ');}
-
 function parseCSV(text){
   const rows=[];const lines=text.split('\n');
   for(const line of lines){
@@ -228,7 +243,6 @@ function parseCSV(text){
   }
   return rows;
 }
-
 function getItemsDia(){
   if(!state.dia)return[];
   const tipo=DIAS[state.dia];
@@ -245,7 +259,6 @@ function calcItem(it){
   const receitas=it.rende>0?Math.ceil(total/it.rende*2)/2:0;
   return{prodMil,prodReg,total,receitas};
 }
-
 function selectDay(dia){
   state.dia=dia;
   document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('active-a','active-b'));
@@ -263,12 +276,11 @@ function setFilter(f){
   renderTable();
 }
 function switchTab(tab){
-  ['entrada','ordem'].forEach((t,i)=>{
+  ['entrada','ordem','regina'].forEach((t,i)=>{
     document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
     document.querySelectorAll('.tab')[i].classList.toggle('active',t===tab);
   });
 }
-
 async function importarSheets(){
   if(!state.dia){alert('Selecione o dia primeiro.');return;}
   const tipo=DIAS[state.dia];
@@ -280,7 +292,6 @@ async function importarSheets(){
   badge.style.display='inline';
   badge.className='import-status import-loading';
   badge.textContent='Buscando...';
-
   const url=sheetId;
   try{
     const res=await fetch(url);
@@ -288,12 +299,9 @@ async function importarSheets(){
     const text=await res.text();
     const rows=parseCSV(text);
     if(rows.length<2)throw new Error('Planilha sem respostas.');
-
     const header=rows[0].map(normalize);
     const colLoja=header.findIndex(h=>h==='LOJA'||h.includes('LOJA'));
     if(colLoja===-1)throw new Error('Coluna LOJA não encontrada no cabeçalho.');
-
-    // Build item→colIndex map
     const itemColMap={};
     ITEMS.forEach(it=>{
       const n=normalize(it.nome);
@@ -305,8 +313,6 @@ async function importarSheets(){
         }
       });
     });
-
-    // Find today string variants
     const hoje=new Date();
     const dd=String(hoje.getDate()).padStart(2,'0');
     const mm=String(hoje.getMonth()+1).padStart(2,'0');
@@ -316,12 +322,9 @@ async function importarSheets(){
       `${yyyy}-${mm}-${dd}`,
       `${dd}/${mm}`,
     ];
-
     function isToday(ts){
       return todayVariants.some(v=>ts.includes(v));
     }
-
-    // Scan bottom-up: find latest row per loja for today
     const lojaRows={};
     for(let i=rows.length-1;i>=1;i--){
       const row=rows[i];
@@ -334,8 +337,6 @@ async function importarSheets(){
       if(isReg&&!lojaRows.reg)lojaRows.reg={row,ts,label:row[colLoja]};
       if(lojaRows.mil&&lojaRows.reg)break;
     }
-
-    // Fallback: last row per loja regardless of date
     if(!lojaRows.mil||!lojaRows.reg){
       for(let i=rows.length-1;i>=1;i--){
         const row=rows[i];
@@ -347,8 +348,6 @@ async function importarSheets(){
         if(lojaRows.mil&&lojaRows.reg)break;
       }
     }
-
-    // Apply values
     state.importedKeys=new Set();
     let count=0;
     ['mil','reg'].forEach(loja=>{
@@ -366,8 +365,6 @@ async function importarSheets(){
         }
       });
     });
-
-    // Update loja status
     const lojaStatusEl=document.getElementById('loja-status');
     lojaStatusEl.style.display='flex';
     const milEl=document.getElementById('status-mil');
@@ -386,7 +383,6 @@ async function importarSheets(){
       regEl.className='loja-tag loja-none';
       regEl.innerHTML=`<i class="ti ti-alert-triangle" style="font-size:12px"></i> Regina: sem resposta hoje`;
     }
-
     badge.className='import-status import-ok';
     badge.textContent=`✓ ${count} campos importados`;
     desc.textContent='Milionários + Regina carregados — revise e ajuste se necessário';
@@ -399,7 +395,6 @@ async function importarSheets(){
   }
   btn.disabled=false;
 }
-
 function renderTable(){
   const tbody=document.getElementById('tbody');
   const emptyMsg=document.getElementById('empty-msg');
@@ -436,7 +431,6 @@ function renderTable(){
     </tr>`;
   }).join('');
 }
-
 function setEstoque(nome,loja,val,el){
   const k=nome+'|'+loja;
   state.estoques[k]=val;
@@ -444,7 +438,6 @@ function setEstoque(nome,loja,val,el){
   el.className=val!==''?'input-estoque changed':'input-estoque';
   updateStats(getItemsDia());
 }
-
 function updateStats(items){
   let p=0,z=0,r=0;
   items.forEach(it=>{const c=calcItem(it);if(c.total>0)p++;if(getEstoque(it.nome,'mil')===0&&getEstoque(it.nome,'reg')===0)z++;r+=c.receitas;});
@@ -453,14 +446,12 @@ function updateStats(items){
   document.getElementById('stat-zero').textContent=items.length?z:'—';
   document.getElementById('stat-rec').textContent=items.length?r.toFixed(1):'—';
 }
-
 function resetEstoques(){
   if(!confirm('Limpar todos os estoques?'))return;
   state.estoques={};state.importedKeys=new Set();
   document.getElementById('loja-status').style.display='none';
   renderTable();
 }
-
 function gerarOrdem(){
   const items=getItemsDia();
   if(!items.length){alert('Selecione o dia primeiro.');return;}
@@ -488,7 +479,6 @@ function gerarOrdem(){
   document.getElementById('ordem-zerados').textContent=semProd.map(it=>it.nome).join(' • ')||'Nenhum';
   switchTab('ordem');
 }
-
 function exportarExcel(){
   const items=getItemsDia().filter(it=>calcItem(it).total>0);
   const tipo=DIAS[state.dia];
@@ -501,7 +491,41 @@ function exportarExcel(){
   const d=new Date();
   XLSX.writeFile(wb,`ordem_producao_${tipo}_${String(d.getDate()).padStart(2,'0')}_${String(d.getMonth()+1).padStart(2,'0')}.xlsx`);
 }
-
+function gerarTransferencia(){
+  const items=getItemsDia();
+  if(!items.length){alert('Selecione o dia primeiro.');return;}
+  const comTransf=items.filter(it=>{
+    if(it.ideal_reg<=0)return false;
+    const estReg=getEstoque(it.nome,'reg');
+    return (it.ideal_reg - estReg) > 0;
+  });
+  const totalUn=comTransf.reduce((sum,it)=>{
+    return sum + Math.max(0, it.ideal_reg - getEstoque(it.nome,'reg'));
+  },0);
+  document.getElementById('regina-vazia').style.display='none';
+  document.getElementById('regina-content').style.display='block';
+  const d=new Date();
+  const dd=String(d.getDate()).padStart(2,'0');
+  const mm=String(d.getMonth()+1).padStart(2,'0');
+  const yyyy=d.getFullYear();
+  document.getElementById('regina-titulo').textContent=`Transferência para Loja Regina — ${dd}/${mm}/${yyyy}`;
+  document.getElementById('regina-subtitulo').textContent=`${comTransf.length} itens a transferir  •  Transferência = Ideal Reg. − Estoque atual`;
+  document.getElementById('regina-grid').innerHTML=comTransf.map(it=>{
+    const estReg=getEstoque(it.nome,'reg');
+    const transf=Math.max(0, it.ideal_reg - estReg);
+    return `<div class="transf-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        ${it.cod?`<span style="font-size:10px;color:#aaa">#${it.cod}</span>`:'<span></span>'}
+      </div>
+      <div class="transf-card-nome">${it.nome}</div>
+      <div class="transf-card-detail">Ideal Regina: <b>${it.ideal_reg}</b></div>
+      <div class="transf-card-detail">Estoque atual: <b>${estReg}</b></div>
+      <div class="transf-card-qtd">${transf} un.</div>
+    </div>`;
+  }).join('');
+  document.getElementById('regina-total').textContent=`Total: ${comTransf.length} itens  •  ${totalUn} unidades para Regina`;
+  switchTab('regina');
+}
 const mapAmanha={0:null,1:'ter',2:'qua',3:'qui',4:'sex',5:'sab',6:null};
 const dm=mapAmanha[new Date().getDay()];
 if(dm)selectDay(dm);
