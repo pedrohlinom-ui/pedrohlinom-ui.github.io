@@ -321,8 +321,8 @@ async function importarSheets(){
     if(rows.length<2)throw new Error('Planilha sem respostas.');
 
     const header=rows[0].map(normalize);
-    const colLoja=header.findIndex(h=>h==='LOJA'||h.includes('LOJA'));
-    if(colLoja===-1)throw new Error('Coluna LOJA não encontrada no cabeçalho.');
+    const colLoja=header.findIndex(h=>h==='LOJA'||h.includes('LOJA')||h==='COLUNA 2'||h.includes('COLUNA 2'));
+    if(colLoja===-1)throw new Error('Coluna de loja não encontrada. Colunas: '+header.slice(0,5).join(', '));
 
     // Build item→colIndex map
     const itemColMap={};
