@@ -362,9 +362,8 @@ async function importarSheets(){
     if(rows.length<2)throw new Error('Planilha sem respostas.');
 
     // Encontrar a linha de cabeçalho: primeira linha com muitas colunas (>10) e sem timestamp
-    // O cabeçalho pode estar na rows[0] mas se o CSV tem 
- fora de aspas, pode estar espalhado
-    // Estratégia: encontrar a linha com mais colunas que contenha LOJA ou COLUNA
+    // O cabecalho pode estar na rows[0] mas se o CSV tem quebras de linha fora de aspas, pode estar espalhado
+    // Estrategia: encontrar a linha com mais colunas que contenha LOJA ou COLUNA
     let headerRow = rows[0];
     let headerIdx = 0;
     for(let ri=0;ri<Math.min(rows.length,5);ri++){
@@ -634,7 +633,7 @@ function gerarTransferencia(){
 
 
 // ─── BANCO DE RECEITAS ────────────────────────────────────────────────────────
-// Formato: nome_sistema → { rende: N, ingredientes: [{desc, qtd, um}] }
+// Formato: nome_sistema -> { rende: N, ingredientes: [{desc, qtd, um}] }
 const RECEITAS = {
   "BISC. C/ QUEIJO KG": { rende: 51, ing: [
     {d:"AGUA",q:0.600,u:"LT"},{d:"OLEO SOJA",q:0.300,u:"KG"},{d:"OVOS BRANCOS",q:0.600,u:"KG"},
@@ -700,7 +699,7 @@ const RECEITAS = {
     {d:"CENOURA",q:0.500,u:"KG"},{d:"FARINHA DE TRIGO",q:0.500,u:"KG"},
     {d:"FERMENTO EM PO QUIMICO",q:0.040,u:"KG"},{d:"OLEO SOJA",q:0.190,u:"KG"},
     {d:"OVOS BRANCOS",q:0.325,u:"KG"} ]},
-  "BOLO DE CENOURA C/GOTAS CHOCO.": { rende: 10, ing: [
+  "BOLO DE CENOURA C/GOTAS DE CHOCO.": { rende: 10, ing: [
     {d:"MINI TORTA G32M 750G",q:1,u:"UN"},{d:"ACUCAR",q:1.000,u:"KG"},
     {d:"CENOURA",q:1.000,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:1.000,u:"KG"},
     {d:"FERMENTO EM PO QUIMICO",q:0.080,u:"KG"},{d:"GOTAS DE CHOCOLATE",q:0.200,u:"KG"},
@@ -822,7 +821,7 @@ const RECEITAS = {
     {d:"MUSSARELA",q:0.250,u:"KG"},{d:"OREGANO",q:0.010,u:"KG"},
     {d:"PIMENTAO COLORIDO",q:0.150,u:"KG"},{d:"PIMENTAO",q:0.150,u:"KG"},
     {d:"PRESUNTO",q:1.250,u:"KG"} ]},
-  "MINI PIZZA CATALAO BDJ": { rende: 15, ing: [
+  "MINI PIZZA CATALÃO BDJ": { rende: 15, ing: [
     {d:"BANDEJA ISOPOR B03",q:1,u:"UN"},{d:"AGUA",q:0.500,u:"KG"},
     {d:"APRESUNTADO",q:0.940,u:"KG"},{d:"FERMENTO FRESCO",q:0.060,u:"KG"},
     {d:"MIST. PAO DE MULTIMASSAS",q:1.000,u:"KG"},{d:"MUSSARELA",q:0.400,u:"KG"},
@@ -905,7 +904,7 @@ const RECEITAS = {
     {d:"LATA MILHO VERDE",q:0.750,u:"KG"},{d:"LEITE INTEGRAL",q:1.000,u:"KG"},
     {d:"MARGARINA",q:0.050,u:"KG"},{d:"OVOS BRANCOS",q:0.300,u:"KG"},
     {d:"SAL",q:0.008,u:"KG"},{d:"ACUCAR REFINADO",q:0.500,u:"KG"} ]},
-  "PAO DOCE C/ ACUCAR KG": { rende: 30, ing: [
+  "PÃO DOCE C/ ACUCAR KG": { rende: 30, ing: [
     {d:"ACUCAR GRANULADO",q:0.070,u:"KG"},{d:"ACUCAR",q:0.100,u:"KG"},
     {d:"AGUA",q:0.436,u:"LT"},{d:"FARINHA DE TRIGO",q:1.058,u:"KG"},
     {d:"FERMENTO FRESCO",q:0.031,u:"KG"},{d:"MARGARINA",q:0.062,u:"KG"},
@@ -918,19 +917,19 @@ const RECEITAS = {
     {d:"FERMENTO FRESCO",q:0.031,u:"KG"},{d:"MARGARINA",q:0.062,u:"KG"},
     {d:"MELHORADOR",q:0.010,u:"KG"},{d:"OVOS BRANCOS",q:0.093,u:"KG"},
     {d:"SAL",q:0.010,u:"KG"} ]},
-  "PAO DOCE C/ CREME KG": { rende: 30, ing: [
+  "PÃO DOCE C/ CREME KG": { rende: 30, ing: [
     {d:"ACUCAR",q:0.100,u:"KG"},{d:"AGUA",q:0.436,u:"LT"},
     {d:"CREME CONFEITEIRO",q:0.630,u:"KG"},{d:"FARINHA DE TRIGO",q:1.058,u:"KG"},
     {d:"FERMENTO FRESCO",q:0.031,u:"KG"},{d:"MARGARINA",q:0.062,u:"KG"},
     {d:"MELHORADOR",q:0.010,u:"KG"},{d:"OVOS BRANCOS",q:0.093,u:"KG"},
     {d:"SAL",q:0.010,u:"KG"} ]},
-  "PAO DOCE C/ QUEIJO KG": { rende: 30, ing: [
+  "PÃO DOCE C/ QUEIJO KG": { rende: 30, ing: [
     {d:"ACUCAR",q:0.100,u:"KG"},{d:"AGUA",q:0.436,u:"LT"},
     {d:"FARINHA DE TRIGO",q:1.058,u:"KG"},{d:"FERMENTO FRESCO",q:0.031,u:"KG"},
     {d:"MARGARINA",q:0.062,u:"KG"},{d:"MELHORADOR",q:0.010,u:"KG"},
     {d:"OVOS BRANCOS",q:0.093,u:"KG"},{d:"QUEIJO MINAS",q:0.115,u:"KG"},
     {d:"SAL",q:0.010,u:"KG"} ]},
-  "PAO DOCE COMPRIDO KG": { rende: 30, ing: [
+  "PÃO DOCE COMPRIDO KG": { rende: 30, ing: [
     {d:"FECHO PLASTIFICADO 7CM",q:30,u:"UN"},{d:"SACO LISO PP 25X50CM",q:30,u:"UN"},
     {d:"ACUCAR",q:0.100,u:"KG"},{d:"AGUA",q:0.436,u:"LT"},
     {d:"FARINHA DE TRIGO",q:1.058,u:"KG"},{d:"FERMENTO FRESCO",q:0.031,u:"KG"},
@@ -1008,7 +1007,7 @@ const RECEITAS = {
     {d:"CARNE DE HAMBURGUER FRANGO",q:0.840,u:"KG"},{d:"FERMENTO FRESCO",q:0.026,u:"KG"},
     {d:"ITAFLEX",q:1.228,u:"KG"},{d:"MUSSARELA",q:0.500,u:"KG"},
     {d:"REQUEIJAO",q:0.150,u:"KG"} ]},
-  "MINI SANDUICHE ENROLADO KG": { rende: 102, ing: [
+  "MINI LANCHINHO KG": { rende: 102, ing: [
     {d:"AGUA",q:0.450,u:"LT"},{d:"APRESUNTADO",q:0.746,u:"KG"},
     {d:"FERMENTO FRESCO",q:0.060,u:"KG"},{d:"MIST. PAO DE MULTIMASSAS",q:1.000,u:"KG"},
     {d:"MUSSARELA",q:0.594,u:"KG"} ]},
