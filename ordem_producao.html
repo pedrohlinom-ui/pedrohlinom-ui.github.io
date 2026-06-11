@@ -328,10 +328,23 @@ async function importarSheets(){
     const rows=parseCSV(text);
     if(rows.length<2)throw new Error('Planilha sem respostas.');
 
-    const header=rows[0].map(normalize);
-    // Debug: log primeiras linhas e colunas
-    console.log('CSV primeiras 3 linhas:', rows.slice(0,3).map(r=>r.slice(0,5)));
-    console.log('Header normalizado:', header.slice(0,6));
+    // Encontrar a linha de cabeçalho: primeira linha com muitas colunas (>10) e sem timestamp
+    // O cabeçalho pode estar na rows[0] mas se o CSV tem 
+ fora de aspas, pode estar espalhado
+    // Estratégia: encontrar a linha com mais colunas que contenha LOJA ou COLUNA
+    let headerRow = rows[0];
+    let headerIdx = 0;
+    for(let ri=0;ri<Math.min(rows.length,5);ri++){
+      const r=rows[ri];
+      const joined=r.join(' ').toUpperCase();
+      if(joined.includes('LOJA')||joined.includes('COLUNA 2')||joined.includes('RESPONSAVEL')){
+        if(r.length > headerRow.length){headerRow=r;headerIdx=ri;}
+        else if(headerRow.length<=4){headerRow=r;headerIdx=ri;}
+        break;
+      }
+    }
+    const header=headerRow.map(normalize);
+    console.log('Header idx:', headerIdx, 'colunas:', header.length, 'primeiras 6:', header.slice(0,6));
     const colLoja=header.findIndex(h=>h==='LOJA'||h.includes('LOJA')||h==='COLUNA 2'||h.includes('COLUNA 2'));
     if(colLoja===-1)throw new Error('Colunas encontradas: '+header.slice(0,6).join(' | '));
 
@@ -367,9 +380,11 @@ async function importarSheets(){
     }
 
     // Scan bottom-up: find latest row per loja for today
+    // Linhas de dados são as que têm timestamp (começa com número ou 2 dígitos/...)
+    const dataRows=rows.filter((r,i)=>i>headerIdx && r.length>4 && /^\d{2}[\/\-]/.test(r[0]||''));
     const lojaRows={};
-    for(let i=rows.length-1;i>=1;i--){
-      const row=rows[i];
+    for(let i=dataRows.length-1;i>=0;i--){
+      const row=dataRows[i];
       const ts=row[0]||'';
       const loja=normalize(row[colLoja]||'');
       if(!isToday(ts))continue;
@@ -382,8 +397,8 @@ async function importarSheets(){
 
     // Fallback: last row per loja regardless of date
     if(!lojaRows.mil||!lojaRows.reg){
-      for(let i=rows.length-1;i>=1;i--){
-        const row=rows[i];
+      for(let i=dataRows.length-1;i>=0;i--){
+        const row=dataRows[i];
         const loja=normalize(row[colLoja]||'');
         const isMil=loja.includes('MILION');
         const isReg=loja.includes('REGINA');
