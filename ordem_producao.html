@@ -72,6 +72,18 @@ tr:hover td{background:#fafaf8}
 .btn-secondary:hover{background:#f4f4f0}
 .btn-azul{padding:8px 18px;border-radius:8px;border:1px solid #185FA5;background:#185FA5;color:#fff;font-size:13px;font-weight:500;cursor:pointer}
 .btn-azul:hover{background:#0f4a8a}
+.btn-verde{padding:8px 18px;border-radius:8px;border:1px solid #1D9E75;background:#1D9E75;color:#fff;font-size:13px;font-weight:500;cursor:pointer}
+.btn-verde:hover{background:#158a63}
+.sep-card{border:1px solid #d4edda;border-radius:10px;padding:14px;background:#fff;margin-bottom:12px;page-break-inside:avoid}
+.sep-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #1D9E75}
+.sep-card-nome{font-size:14px;font-weight:600;color:#1a1a1a}
+.sep-card-receitas{font-size:22px;font-weight:700;color:#1D9E75}
+.sep-card-rende{font-size:11px;color:#666;margin-top:2px}
+.sep-ing-table{width:100%;border-collapse:collapse;font-size:12px}
+.sep-ing-table th{text-align:left;padding:4px 8px;background:#f4f4f0;color:#666;font-weight:500;border-bottom:1px solid #e5e5e0}
+.sep-ing-table td{padding:5px 8px;border-bottom:1px solid #f0f0ec}
+.sep-ing-table tr:last-child td{border-bottom:none}
+.sep-ing-qtd{font-weight:600;color:#185FA5;text-align:right}
 .transf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:1rem}
 .transf-card{border:1px solid #C3D9F5;border-radius:10px;padding:12px;background:#fff}
 .transf-card-nome{font-size:12px;font-weight:500;margin-bottom:6px}
@@ -108,6 +120,7 @@ tr:hover td{background:#fafaf8}
   <div class="tab active" onclick="switchTab('entrada')">Lançamento de estoque</div>
   <div class="tab" onclick="switchTab('ordem')">Ordem de produção</div>
   <div class="tab" onclick="switchTab('regina')">Transferência Regina</div>
+  <div class="tab" onclick="switchTab('separacao')">Separação MP</div>
 </div>
 
 <div id="tab-entrada">
@@ -177,6 +190,7 @@ tr:hover td{background:#fafaf8}
     <button class="btn-secondary" onclick="resetEstoques()"><i class="ti ti-refresh"></i> Limpar estoques</button>
     <button class="btn-primary" onclick="gerarOrdem()"><i class="ti ti-file-check"></i> Gerar ordem de produção</button>
     <button class="btn-azul" onclick="gerarTransferencia()"><i class="ti ti-arrow-right"></i> Transferência Regina</button>
+    <button class="btn-verde" onclick="gerarSeparacao()"><i class="ti ti-clipboard-list"></i> Separação MP</button>
   </div>
 </div>
 
@@ -224,6 +238,25 @@ tr:hover td{background:#fafaf8}
       </div>
       <div id="regina-grid" class="transf-grid"></div>
       <div style="margin-top:1rem;padding:10px 14px;background:#E6F1FB;border-radius:8px;font-size:12px;color:#185FA5;font-weight:500" id="regina-total"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-separacao" style="display:none">
+  <div style="padding:1rem 1.5rem">
+    <div id="sep-vazia" style="text-align:center;padding:3rem;color:#aaa">
+      <i class="ti ti-clipboard-list" style="font-size:32px;display:block;margin-bottom:8px"></i>
+      <p style="font-size:13px">Lance os estoques e clique em "Separação MP"</p>
+    </div>
+    <div id="sep-content" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:15px;font-weight:500" id="sep-titulo"></div>
+          <div style="font-size:12px;color:#666" id="sep-subtitulo"></div>
+        </div>
+        <button class="btn-primary" onclick="window.print()"><i class="ti ti-printer"></i> Imprimir</button>
+      </div>
+      <div id="sep-cards"></div>
     </div>
   </div>
 </div>
@@ -302,7 +335,7 @@ function setFilter(f){
   renderTable();
 }
 function switchTab(tab){
-  ['entrada','ordem','regina'].forEach((t,i)=>{
+  ['entrada','ordem','regina','separacao'].forEach((t,i)=>{
     document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
     document.querySelectorAll('.tab')[i].classList.toggle('active',t===tab);
   });
@@ -597,6 +630,479 @@ function gerarTransferencia(){
   }).join('');
   document.getElementById('regina-total').textContent=`Total: ${comTransf.length} itens  •  ${totalUn} unidades para Regina`;
   switchTab('regina');
+}
+
+
+// ─── BANCO DE RECEITAS ────────────────────────────────────────────────────────
+// Formato: nome_sistema → { rende: N, ingredientes: [{desc, qtd, um}] }
+const RECEITAS = {
+  "BISC. C/ QUEIJO KG": { rende: 51, ing: [
+    {d:"AGUA",q:0.600,u:"LT"},{d:"OLEO SOJA",q:0.300,u:"KG"},{d:"OVOS BRANCOS",q:0.600,u:"KG"},
+    {d:"POLVILHO AZEDO",q:1.400,u:"KG"},{d:"QUEIJO MINAS",q:0.200,u:"KG"},{d:"SAL",q:0.040,u:"KG"} ]},
+  "BISC. FRITO DOCE KG": { rende: 39, ing: [
+    {d:"AMIDO DE MILHO",q:0.150,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:1.000,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.030,u:"KG"},{d:"LEITE INTEGRAL",q:0.350,u:"KG"},
+    {d:"MARGARINA",q:0.050,u:"KG"},{d:"OVOS BRANCOS",q:0.300,u:"KG"},
+    {d:"ACUCAR REFINADO",q:0.300,u:"KG"} ]},
+  "BISC.PALITO DE QUEIJO KG": { rende: 51, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:51,u:"UN"},{d:"SACO LISO 20X34CM",q:51,u:"UN"},
+    {d:"AGUA",q:1.200,u:"LT"},{d:"MARGARINA",q:0.100,u:"KG"},{d:"OLEO SOJA",q:1.200,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.900,u:"KG"},{d:"POLVILHO AZEDO",q:5.000,u:"KG"},
+    {d:"QUEIJO MINAS",q:0.250,u:"KG"},{d:"SAL",q:0.130,u:"KG"} ]},
+  "BISCOITO DA VOVO KG": { rende: 40, ing: [
+    {d:"CANELA EM PO",q:0.010,u:"KG"},{d:"FERMENTO EM PO QUIMICO",q:0.030,u:"KG"},
+    {d:"MISTURA P/PAO DE QUEIJO",q:1.000,u:"KG"},{d:"OVOS BRANCOS",q:0.600,u:"KG"},
+    {d:"ACUCAR REFINADO",q:0.300,u:"KG"} ]},
+  "BOLO BEM CASADO KG": { rende: 5, ing: [
+    {d:"BANDEJA P/BOLO N32",q:1,u:"UN"},{d:"DOCE DE LEITE",q:0.875,u:"KG"},
+    {d:"ESSENCIA DE BAUNILHA",q:0.005,u:"UN"},{d:"FARINHA DE TRIGO PADEIRO",q:0.300,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.020,u:"KG"},{d:"OVOS BRANCOS",q:0.600,u:"KG"},
+    {d:"SAL",q:0.005,u:"KG"},{d:"ACUCAR IMPALPAVEL",q:0.080,u:"KG"},
+    {d:"ACUCAR REFINADO",q:0.240,u:"KG"} ]},
+  "BOLO BRIGADEIRO 420G": { rende: 18, ing: [
+    {d:"BANDEJA P/BOLO N32",q:1,u:"UN"},{d:"ACUCAR",q:1.500,u:"KG"},
+    {d:"CHOCOLATE EM PO 50% CACAU",q:0.205,u:"KG"},{d:"CHOCOLATE GRANULADO ESCURO",q:0.660,u:"KG"},
+    {d:"DOCE DE LEITE",q:0.475,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:1.500,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.100,u:"KG"},{d:"LEITE CONDENSADO",q:0.150,u:"KG"},
+    {d:"LEITE INTEGRAL",q:1.000,u:"KG"},{d:"MARGARINA",q:0.050,u:"KG"},
+    {d:"OLEO SOJA",q:0.500,u:"KG"},{d:"OVOS BRANCOS",q:1.000,u:"KG"} ]},
+  "BOLO CENOURA CHOC. 390G": { rende: 11, ing: [
+    {d:"MINI TORTA G32M 750G",q:1,u:"UN"},{d:"ACUCAR",q:1.000,u:"KG"},
+    {d:"CENOURA",q:1.000,u:"KG"},{d:"CHOCOLATE EM PO",q:0.040,u:"KG"},
+    {d:"CREME DE LEITE CULINARIO",q:0.330,u:"KG"},{d:"FARINHA DE TRIGO",q:1.000,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.080,u:"KG"},{d:"LEITE CONDENSADO",q:0.800,u:"KG"},
+    {d:"MARGARINA",q:0.020,u:"KG"},{d:"OLEO SOJA",q:0.380,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.600,u:"KG"},{d:"SAL",q:0.005,u:"KG"} ]},
+  "BOLO COCO 350G": { rende: 6, ing: [
+    {d:"MINI TORTA G32M 750G",q:6,u:"UN"},{d:"ACUCAR",q:0.600,u:"KG"},
+    {d:"AMIDO DE MILHO",q:0.060,u:"KG"},{d:"ESSENCIA DE COCO",q:0.050,u:"UN"},
+    {d:"ESTABILIZANTE GLINTEX",q:0.025,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:0.720,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.040,u:"KG"},{d:"LEITE INTEGRAL",q:0.600,u:"KG"},
+    {d:"MARGARINA",q:0.300,u:"KG"},{d:"OVOS BRANCOS",q:0.444,u:"KG"} ]},
+  "BOLO DE ABACAXI 350G": { rende: 6, ing: [
+    {d:"MINI TORTA G32M 750G",q:6,u:"UN"},{d:"ACUCAR",q:0.600,u:"KG"},
+    {d:"AMIDO DE MILHO",q:0.060,u:"KG"},{d:"ESSENCIA DE ABACAXI",q:0.025,u:"UN"},
+    {d:"ESTABILIZANTE GLINTEX",q:0.025,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:0.720,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.040,u:"KG"},{d:"LEITE INTEGRAL",q:0.600,u:"KG"},
+    {d:"MARGARINA",q:0.300,u:"KG"},{d:"OVOS BRANCOS",q:0.444,u:"KG"} ]},
+  "BOLO DE AIPIM 350G": { rende: 20, ing: [
+    {d:"MINI TORTA G32M 750G",q:21,u:"UN"},{d:"COCO",q:0.300,u:"KG"},
+    {d:"ESTABILIZANTE GLINTEX",q:0.100,u:"KG"},{d:"LEITE INTEGRAL",q:2.000,u:"KG"},
+    {d:"MISTURA P/BOLO AIPIM",q:5.000,u:"KG"},{d:"OVOS BRANCOS",q:1.500,u:"KG"} ]},
+  "BOLO DE BAUNILHA 350G": { rende: 6, ing: [
+    {d:"MINI TORTA G32M 750G",q:6,u:"UN"},{d:"ACUCAR",q:0.600,u:"KG"},
+    {d:"AMIDO DE MILHO",q:0.060,u:"KG"},{d:"ESSENCIA DE BAUNILHA",q:0.025,u:"UN"},
+    {d:"ESTABILIZANTE GLINTEX",q:0.025,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:0.720,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.040,u:"KG"},{d:"LEITE INTEGRAL",q:0.600,u:"KG"},
+    {d:"MARGARINA",q:0.300,u:"KG"},{d:"OVOS BRANCOS",q:0.444,u:"KG"} ]},
+  "BOLO DE CENOURA 350G": { rende: 5, ing: [
+    {d:"MINI TORTA G32M 750G",q:5,u:"UN"},{d:"ACUCAR",q:0.500,u:"KG"},
+    {d:"CENOURA",q:0.500,u:"KG"},{d:"FARINHA DE TRIGO",q:0.500,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.040,u:"KG"},{d:"OLEO SOJA",q:0.190,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.325,u:"KG"} ]},
+  "BOLO DE CENOURA C/GOTAS CHOCO.": { rende: 10, ing: [
+    {d:"MINI TORTA G32M 750G",q:1,u:"UN"},{d:"ACUCAR",q:1.000,u:"KG"},
+    {d:"CENOURA",q:1.000,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:1.000,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.080,u:"KG"},{d:"GOTAS DE CHOCOLATE",q:0.200,u:"KG"},
+    {d:"OLEO SOJA",q:0.380,u:"KG"},{d:"OVOS BRANCOS",q:0.650,u:"KG"} ]},
+  "BOLO DE CHOCOLATE 350G": { rende: 6, ing: [
+    {d:"MINI TORTA G32M 750G",q:6,u:"UN"},{d:"ACUCAR",q:0.600,u:"KG"},
+    {d:"AMIDO DE MILHO",q:0.060,u:"KG"},{d:"CHOCOLATE EM PO",q:0.150,u:"KG"},
+    {d:"ESTABILIZANTE GLINTEX",q:0.025,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:0.720,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.040,u:"KG"},{d:"LEITE INTEGRAL",q:0.600,u:"KG"},
+    {d:"MARGARINA",q:0.300,u:"KG"},{d:"OVOS BRANCOS",q:0.444,u:"KG"} ]},
+  "BOLO DE CHURROS KG": { rende: 4, ing: [
+    {d:"FORMA DE BOLO",q:4,u:"UN"},{d:"DOCE DE LEITE",q:0.500,u:"KG"},
+    {d:"LEITE INTEGRAL",q:0.500,u:"KG"},{d:"MISTURA BOLO CHURROS",q:1.000,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.300,u:"KG"} ]},
+  "BOLO DE IOGURTE 450G": { rende: 12, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:12,u:"UN"},{d:"SACO LISO 25X35CM",q:12,u:"UN"},
+    {d:"ANTIMOFO",q:0.010,u:"KG"},{d:"BEBIDA LACTEA",q:1.750,u:"KG"},
+    {d:"CANELA EM PO",q:0.030,u:"KG"},{d:"FARINHA DE TRIGO",q:2.000,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.085,u:"KG"},{d:"OLEO SOJA",q:1.000,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.900,u:"KG"},{d:"ACUCAR REFINADO",q:1.000,u:"KG"} ]},
+  "BOLO DE LARANJA 350G": { rende: 6, ing: [
+    {d:"MINI TORTA G32M 750G",q:6,u:"UN"},{d:"ACUCAR",q:0.600,u:"KG"},
+    {d:"AMIDO DE MILHO",q:0.060,u:"KG"},{d:"ESSENCIA DE LARANJA",q:0.025,u:"UN"},
+    {d:"ESTABILIZANTE GLINTEX",q:0.025,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:0.720,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.040,u:"KG"},{d:"LEITE INTEGRAL",q:0.600,u:"KG"},
+    {d:"MARGARINA",q:0.300,u:"KG"},{d:"OVOS BRANCOS",q:0.444,u:"KG"} ]},
+  "BOLO DE LIMAO 350G": { rende: 6, ing: [
+    {d:"MINI TORTA G32M 750G",q:6,u:"UN"},{d:"ACUCAR",q:0.600,u:"KG"},
+    {d:"AMIDO DE MILHO",q:0.060,u:"KG"},{d:"ESSENCIA DE LIMAO",q:0.025,u:"UN"},
+    {d:"ESTABILIZANTE GLINTEX",q:0.025,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:0.720,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.040,u:"KG"},{d:"LEITE INTEGRAL",q:0.600,u:"KG"},
+    {d:"MARGARINA",q:0.300,u:"KG"},{d:"OVOS BRANCOS",q:0.444,u:"KG"} ]},
+  "BOLO DUPLO CHOCOLATE 150G": { rende: 12, ing: [
+    {d:"BANDEJA ISOPOR B01",q:1,u:"UN"},{d:"ACUCAR",q:0.400,u:"KG"},
+    {d:"CHOCOLATE EM PO",q:0.070,u:"KG"},{d:"CHOCOLATE GRANULADO ESCURO",q:0.040,u:"KG"},
+    {d:"DOCE DE LEITE",q:0.475,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:0.400,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.025,u:"KG"},{d:"LEITE CONDENSADO",q:0.150,u:"KG"},
+    {d:"LEITE INTEGRAL",q:0.250,u:"KG"},{d:"OLEO SOJA",q:0.120,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.250,u:"KG"} ]},
+  "BOLO FORMIGUEIRO 350G": { rende: 6, ing: [
+    {d:"MINI TORTA G32M 750G",q:6,u:"UN"},{d:"ACUCAR",q:0.600,u:"KG"},
+    {d:"AMIDO DE MILHO",q:0.060,u:"KG"},{d:"CHOC.GRANULADO",q:0.170,u:"KG"},
+    {d:"ESTABILIZANTE GLINTEX",q:0.025,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:0.720,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.040,u:"KG"},{d:"LEITE INTEGRAL",q:0.600,u:"KG"},
+    {d:"MARGARINA",q:0.300,u:"KG"},{d:"OVOS BRANCOS",q:0.444,u:"KG"} ]},
+  "BOLO MESCLADO CATALAO 350G": { rende: 6, ing: [
+    {d:"MINI TORTA G32M 750G",q:6,u:"UN"},{d:"ACUCAR",q:0.600,u:"KG"},
+    {d:"AMIDO DE MILHO",q:0.060,u:"KG"},{d:"CHOCOLATE EM PO",q:0.120,u:"KG"},
+    {d:"ESTABILIZANTE GLINTEX",q:0.025,u:"KG"},{d:"FARINHA DE TRIGO PADEIRO",q:0.720,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.040,u:"KG"},{d:"LEITE INTEGRAL",q:0.600,u:"KG"},
+    {d:"MARGARINA",q:0.300,u:"KG"},{d:"OVOS BRANCOS",q:0.444,u:"KG"} ]},
+  "BOLO NEUTRO 350G": { rende: 6, ing: [
+    {d:"MINI TORTA G32M 750G",q:6,u:"UN"},{d:"ACUCAR",q:0.600,u:"KG"},
+    {d:"AMIDO DE MILHO",q:0.060,u:"KG"},{d:"ESTABILIZANTE GLINTEX",q:0.025,u:"KG"},
+    {d:"FARINHA DE TRIGO PADEIRO",q:0.720,u:"KG"},{d:"FERMENTO EM PO QUIMICO",q:0.040,u:"KG"},
+    {d:"LEITE INTEGRAL",q:0.600,u:"KG"},{d:"MARGARINA",q:0.300,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.444,u:"KG"} ]},
+  "BOLO PAMONHA KG": { rende: 6, ing: [
+    {d:"MINI TORTA G32M 750G",q:6,u:"UN"},{d:"ACUCAR",q:1.200,u:"KG"},
+    {d:"FARINHA DE TRIGO",q:0.600,u:"KG"},{d:"FERMENTO EM PO QUIMICO",q:0.075,u:"KG"},
+    {d:"LEITE INTEGRAL",q:1.200,u:"KG"},{d:"MARGARINA",q:0.150,u:"KG"},
+    {d:"QUEIJO MINAS",q:0.500,u:"KG"} ]},
+  "BOLO RED VELVET KG": { rende: 24, ing: [
+    {d:"CREME DE LEITE CULINARIO",q:0.400,u:"KG"},{d:"GANACHE BRANCO",q:0.450,u:"KG"},
+    {d:"LEITE CONDENSADO",q:1.580,u:"KG"},{d:"LEITE INTEGRAL",q:0.900,u:"KG"},
+    {d:"MARGARINA",q:0.030,u:"KG"},{d:"MISTURA BOLO RED VELVET",q:2.000,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.700,u:"KG"} ]},
+  "BOMBINHA CATALAO 200G": { rende: 21, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:21,u:"UN"},{d:"SACO LISO 15X34CM",q:21,u:"UN"},
+    {d:"CALDO GALINHA",q:0.030,u:"KG"},{d:"CEBOLINHA",q:0.080,u:"KG"},
+    {d:"FARINHA DE TRIGO",q:0.600,u:"KG"},{d:"FUBA DE CANJICA",q:0.600,u:"KG"},
+    {d:"LEITE INTEGRAL",q:2.000,u:"KG"},{d:"MARGARINA",q:1.000,u:"KG"},
+    {d:"OVOS BRANCOS",q:2.200,u:"KG"},{d:"TEMPERO ALHO E SAL",q:0.040,u:"UN"} ]},
+  "BRIGADEIRO 100G": { rende: 29, ing: [
+    {d:"POTE CRISTAL G742D 250ML",q:29,u:"UN"},{d:"CHOCOLATE EM PO",q:0.525,u:"KG"},
+    {d:"CHOCOLATE GRANULADO ESCURO",q:0.530,u:"KG"},{d:"LEITE CONDENSADO",q:2.500,u:"KG"},
+    {d:"MARGARINA",q:0.120,u:"KG"} ]},
+  "BROA COCO E QUEIJO 390G": { rende: 7, ing: [
+    {d:"COCO",q:0.200,u:"KG"},{d:"FARINHA DE TRIGO",q:0.200,u:"KG"},
+    {d:"FERMENTO EM PO QUIMICO",q:0.050,u:"KG"},{d:"FUBA",q:0.200,u:"KG"},
+    {d:"LEITE INTEGRAL",q:0.700,u:"KG"},{d:"MARGARINA",q:0.100,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.750,u:"KG"},{d:"QUEIJO MINAS",q:0.200,u:"KG"},
+    {d:"ACUCAR REFINADO",q:0.700,u:"KG"} ]},
+  "BROINHA DE CANJICA 130G": { rende: 16, ing: [
+    {d:"FARINHA DE TRIGO",q:0.225,u:"KG"},{d:"FUBA DE CANJICA",q:0.375,u:"KG"},
+    {d:"LEITE INTEGRAL",q:0.750,u:"KG"},{d:"MARGARINA",q:0.300,u:"KG"},
+    {d:"OVOS BRANCOS",q:1.080,u:"KG"},{d:"SAL",q:0.015,u:"KG"},
+    {d:"ACUCAR REFINADO",q:0.050,u:"KG"} ]},
+  "DOCE CAJUZINHO 100G": { rende: 15, ing: [
+    {d:"DOCE QUADRADO G650",q:17,u:"UN"},{d:"AMENDOIM TORRADO MOIDO",q:1.000,u:"KG"},
+    {d:"CHOCOLATE EM PO",q:0.050,u:"KG"},{d:"CREME DE LEITE CULINARIO",q:0.250,u:"KG"},
+    {d:"DOCE DE LEITE",q:0.250,u:"KG"},{d:"ACUCAR REFINADO",q:0.400,u:"KG"} ]},
+  "DOCE DE BEIJINHO 100G": { rende: 17, ing: [
+    {d:"DOCE QUADRADO G650",q:17,u:"UN"},{d:"COCO",q:0.150,u:"KG"},
+    {d:"CREME DE LEITE CULINARIO",q:0.300,u:"KG"},{d:"LEITE EM PO",q:0.900,u:"KG"},
+    {d:"ACUCAR REFINADO",q:0.600,u:"KG"} ]},
+  "DONNUTS 100G": { rende: 16, ing: [
+    {d:"BANDEJA ISOPOR B02",q:15,u:"UN"},{d:"AGUA",q:0.409,u:"LT"},
+    {d:"AMENDOIM TORRADO MOIDO",q:0.030,u:"KG"},{d:"CHOC.GRANULADO COLORIDO",q:0.050,u:"KG"},
+    {d:"COB. CHOCOLATE AO LEITE",q:0.560,u:"KG"},{d:"FERMENTO FRESCO",q:0.018,u:"KG"},
+    {d:"ITAFLEX",q:0.818,u:"KG"} ]},
+  "ENROLAD.DE MORTADELA KG": { rende: 22, ing: [
+    {d:"BANDEJA ISOPOR B01",q:22,u:"UN"},{d:"AGUA",q:1.363,u:"LT"},
+    {d:"FERMENTO FRESCO",q:0.058,u:"KG"},{d:"ITAFLEX",q:2.726,u:"KG"},
+    {d:"MOLHO TOMATE",q:0.200,u:"KG"},{d:"MORTADELA",q:3.600,u:"KG"},
+    {d:"OREGANO",q:0.020,u:"KG"},{d:"OVOS BRANCOS",q:0.240,u:"KG"} ]},
+  "ESFIRRA DE CARNE 120G": { rende: 10, ing: [
+    {d:"BANDEJA ISOPOR B01",q:10,u:"UN"},{d:"ACEM",q:0.400,u:"KG"},
+    {d:"AGUA",q:0.409,u:"LT"},{d:"FERMENTO FRESCO",q:0.018,u:"KG"},
+    {d:"ITAFLEX",q:0.818,u:"KG"},{d:"REQUEIJAO",q:0.100,u:"KG"} ]},
+  "MINGAU DE MILHO 270G": { rende: 14, ing: [
+    {d:"POTE CRISTAL G742D 250ML",q:14,u:"UN"},{d:"CANELA EM PO",q:0.005,u:"KG"},
+    {d:"LEITE INTEGRAL",q:2.925,u:"KG"},{d:"MILHO VERDE",q:1.350,u:"KG"},
+    {d:"ACUCAR REFINADO",q:0.460,u:"KG"} ]},
+  "MINI PIZZA": { rende: 30, ing: [
+    {d:"BANDEJA ISOPOR B01",q:30,u:"UN"},{d:"AGUA",q:0.400,u:"LT"},
+    {d:"FERMENTO FRESCO",q:0.050,u:"KG"},{d:"ITAFLEX",q:1.000,u:"KG"},
+    {d:"MILHO VERDE",q:0.150,u:"KG"},{d:"MOLHO TOMATE",q:0.050,u:"KG"},
+    {d:"MUSSARELA",q:0.250,u:"KG"},{d:"OREGANO",q:0.010,u:"KG"},
+    {d:"PIMENTAO COLORIDO",q:0.150,u:"KG"},{d:"PIMENTAO",q:0.150,u:"KG"},
+    {d:"PRESUNTO",q:1.250,u:"KG"} ]},
+  "MINI PIZZA CATALAO BDJ": { rende: 15, ing: [
+    {d:"BANDEJA ISOPOR B03",q:1,u:"UN"},{d:"AGUA",q:0.500,u:"KG"},
+    {d:"APRESUNTADO",q:0.940,u:"KG"},{d:"FERMENTO FRESCO",q:0.060,u:"KG"},
+    {d:"MIST. PAO DE MULTIMASSAS",q:1.000,u:"KG"},{d:"MUSSARELA",q:0.400,u:"KG"},
+    {d:"MOLHO TOM.STELLA DORO SC 300G",q:1,u:"UN"} ]},
+  "MINI PUDIM CATALAO 120G": { rende: 12, ing: [
+    {d:"POTE PUDIM TWH PW33 150ML",q:12,u:"UN"},{d:"CALDA P/PUDIM",q:0.300,u:"KG"},
+    {d:"LEITE EM PO",q:0.320,u:"KG"},{d:"LEITE INTEGRAL",q:0.750,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.480,u:"KG"},{d:"ACUCAR REFINADO",q:0.283,u:"KG"} ]},
+  "PAO CASEIRINHO CATALAO 250G": { rende: 42, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:40,u:"UN"},{d:"SACO LISO 25X35CM",q:40,u:"UN"},
+    {d:"ACUCAR",q:0.900,u:"KG"},{d:"FARINHA DE TRIGO",q:8.200,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.360,u:"KG"},{d:"GEMA DE OVO PASTEURIZADA",q:0.600,u:"UN"},
+    {d:"LEITE INTEGRAL",q:2.200,u:"KG"},{d:"MARGARINA",q:0.760,u:"KG"},
+    {d:"MELHORADOR",q:0.060,u:"KG"},{d:"OLEO SOJA",q:1.010,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.900,u:"KG"},{d:"SAL",q:0.060,u:"KG"} ]},
+  "PAO CASEIRO C/ CREME KG": { rende: 20, ing: [
+    {d:"ACUCAR",q:0.400,u:"KG"},{d:"CREME CONFEITEIRO",q:0.500,u:"KG"},
+    {d:"FARINHA DE TRIGO",q:1.750,u:"KG"},{d:"FERMENTO FRESCO",q:0.060,u:"KG"},
+    {d:"LEITE INTEGRAL",q:0.500,u:"KG"},{d:"MARGARINA",q:0.150,u:"KG"},
+    {d:"MELHORADOR",q:0.008,u:"KG"},{d:"OVOS BRANCOS",q:0.300,u:"KG"},
+    {d:"SAL",q:0.020,u:"KG"} ]},
+  "PAO CASEIRO KG": { rende: 20, ing: [
+    {d:"ACUCAR",q:0.400,u:"KG"},{d:"FARINHA DE TRIGO",q:1.750,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.060,u:"KG"},{d:"LEITE INTEGRAL",q:0.500,u:"KG"},
+    {d:"MARGARINA",q:0.150,u:"KG"},{d:"MELHORADOR",q:0.008,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.300,u:"KG"},{d:"SAL",q:0.020,u:"KG"} ]},
+  "PAO DE BATATA CATALAO 250G": { rende: 42, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:42,u:"UN"},{d:"SACO LISO 20X40CM",q:42,u:"UN"},
+    {d:"ACUCAR",q:1.600,u:"KG"},{d:"ANTIMOFO",q:0.040,u:"KG"},
+    {d:"BATATA",q:2.400,u:"KG"},{d:"CORANTE AMARELO OURO",q:0.012,u:"KG"},
+    {d:"FARINHA DE TRIGO",q:7.200,u:"KG"},{d:"FERMENTO FRESCO",q:0.160,u:"KG"},
+    {d:"LEITE INTEGRAL",q:1.000,u:"KG"},{d:"MARGARINA",q:0.320,u:"KG"},
+    {d:"MELHORADOR",q:0.200,u:"KG"},{d:"OVOS BRANCOS",q:0.960,u:"KG"},
+    {d:"SAL",q:0.080,u:"KG"} ]},
+  "PAO DE BATATA KG": { rende: 70, ing: [
+    {d:"ACUCAR",q:0.400,u:"KG"},{d:"ANTIMOFO",q:0.010,u:"KG"},
+    {d:"BATATA",q:0.600,u:"KG"},{d:"CORANTE AMARELO OURO",q:0.003,u:"KG"},
+    {d:"FARINHA DE TRIGO",q:1.800,u:"KG"},{d:"FERMENTO FRESCO",q:0.040,u:"KG"},
+    {d:"LEITE INTEGRAL",q:0.200,u:"KG"},{d:"MARGARINA",q:0.080,u:"KG"},
+    {d:"MELHORADOR",q:0.050,u:"KG"},{d:"OVOS BRANCOS",q:0.200,u:"KG"},
+    {d:"SAL",q:0.020,u:"KG"} ]},
+  "PAO DE CEBOLA CATALAO 250G": { rende: 24, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:24,u:"UN"},{d:"SACO LISO 20X40CM",q:24,u:"UN"},
+    {d:"ACUCAR",q:0.750,u:"KG"},{d:"AGUA",q:1.500,u:"LT"},
+    {d:"ANTIMOFO",q:0.025,u:"KG"},{d:"CEBOLA",q:0.750,u:"KG"},
+    {d:"FARINHA DE TRIGO",q:4.500,u:"KG"},{d:"FERMENTO FRESCO",q:0.100,u:"KG"},
+    {d:"MARGARINA",q:0.200,u:"KG"},{d:"MELHORADOR",q:0.200,u:"KG"},
+    {d:"OREGANO",q:0.015,u:"KG"},{d:"OVOS BRANCOS",q:0.450,u:"KG"},
+    {d:"SAL",q:0.045,u:"KG"} ]},
+  "PAO DE CENOURA CATALAO 250G": { rende: 21, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:21,u:"UN"},{d:"SACO LISO 25X35CM",q:21,u:"UN"},
+    {d:"ACUCAR",q:0.600,u:"KG"},{d:"ANTIMOFO",q:0.010,u:"KG"},
+    {d:"CENOURA",q:0.750,u:"KG"},{d:"FARINHA DE TRIGO",q:4.000,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.200,u:"KG"},{d:"LEITE INTEGRAL",q:0.750,u:"KG"},
+    {d:"MARGARINA",q:0.300,u:"KG"},{d:"MELHORADOR",q:0.030,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.435,u:"KG"},{d:"SAL",q:0.030,u:"KG"} ]},
+  "PAO DE HAMBURGUER 300G": { rende: 14, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:15,u:"UN"},{d:"SACO LISO PP 25X50CM",q:15,u:"UN"},
+    {d:"ACUCAR",q:0.500,u:"KG"},{d:"AGUA",q:2.180,u:"LT"},
+    {d:"FARINHA DE TRIGO",q:5.290,u:"KG"},{d:"FERMENTO FRESCO",q:0.155,u:"KG"},
+    {d:"MARGARINA",q:0.310,u:"KG"},{d:"MELHORADOR",q:0.050,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.465,u:"KG"},{d:"SAL",q:0.050,u:"KG"} ]},
+  "PAO DE HOT DOG 500G": { rende: 16, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:15,u:"UN"},{d:"SACO LISO PP 25X50CM",q:15,u:"UN"},
+    {d:"ACUCAR",q:0.500,u:"KG"},{d:"AGUA",q:2.180,u:"LT"},
+    {d:"FARINHA DE TRIGO",q:5.290,u:"KG"},{d:"FERMENTO FRESCO",q:0.155,u:"KG"},
+    {d:"MARGARINA",q:0.310,u:"KG"},{d:"MELHORADOR",q:0.050,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.465,u:"KG"},{d:"SAL",q:0.050,u:"KG"} ]},
+  "PAO DE LEITE CATALAO 250G": { rende: 19, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:16,u:"UN"},{d:"SACO LISO 25X35CM",q:16,u:"UN"},
+    {d:"ACUCAR",q:0.300,u:"KG"},{d:"ANTIMOFO",q:0.005,u:"KG"},
+    {d:"FARINHA DE TRIGO PADEIRO",q:3.000,u:"KG"},{d:"FERMENTO FRESCO",q:0.180,u:"KG"},
+    {d:"GEMA DE OVO PASTEURIZADA",q:0.063,u:"UN"},{d:"LEITE EM PO",q:0.150,u:"KG"},
+    {d:"LEITE INTEGRAL",q:1.175,u:"KG"},{d:"MARGARINA",q:0.300,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.460,u:"KG"},{d:"REFORCADOR",q:0.030,u:"KG"},
+    {d:"SAL",q:0.030,u:"KG"} ]},
+  "PAO DE MILHO KG": { rende: 64, ing: [
+    {d:"CORANTE AMARELO OURO",q:0.003,u:"KG"},{d:"FARINHA DE TRIGO",q:2.300,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.250,u:"KG"},{d:"FUBA",q:0.125,u:"KG"},
+    {d:"LATA MILHO VERDE",q:0.750,u:"KG"},{d:"LEITE INTEGRAL",q:1.000,u:"KG"},
+    {d:"MARGARINA",q:0.050,u:"KG"},{d:"OVOS BRANCOS",q:0.300,u:"KG"},
+    {d:"SAL",q:0.008,u:"KG"},{d:"ACUCAR REFINADO",q:0.500,u:"KG"} ]},
+  "PAO DOCE C/ ACUCAR KG": { rende: 30, ing: [
+    {d:"ACUCAR GRANULADO",q:0.070,u:"KG"},{d:"ACUCAR",q:0.100,u:"KG"},
+    {d:"AGUA",q:0.436,u:"LT"},{d:"FARINHA DE TRIGO",q:1.058,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.031,u:"KG"},{d:"MARGARINA",q:0.062,u:"KG"},
+    {d:"MELHORADOR",q:0.010,u:"KG"},{d:"OVOS BRANCOS",q:0.093,u:"KG"},
+    {d:"SAL",q:0.010,u:"KG"} ]},
+  "PAO DOCE C/ COCO KG": { rende: 30, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:30,u:"UN"},{d:"SACO LISO PP 25X50CM",q:30,u:"UN"},
+    {d:"ACUCAR",q:0.100,u:"KG"},{d:"AGUA",q:0.436,u:"LT"},
+    {d:"COCO",q:0.200,u:"KG"},{d:"FARINHA DE TRIGO",q:1.058,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.031,u:"KG"},{d:"MARGARINA",q:0.062,u:"KG"},
+    {d:"MELHORADOR",q:0.010,u:"KG"},{d:"OVOS BRANCOS",q:0.093,u:"KG"},
+    {d:"SAL",q:0.010,u:"KG"} ]},
+  "PAO DOCE C/ CREME KG": { rende: 30, ing: [
+    {d:"ACUCAR",q:0.100,u:"KG"},{d:"AGUA",q:0.436,u:"LT"},
+    {d:"CREME CONFEITEIRO",q:0.630,u:"KG"},{d:"FARINHA DE TRIGO",q:1.058,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.031,u:"KG"},{d:"MARGARINA",q:0.062,u:"KG"},
+    {d:"MELHORADOR",q:0.010,u:"KG"},{d:"OVOS BRANCOS",q:0.093,u:"KG"},
+    {d:"SAL",q:0.010,u:"KG"} ]},
+  "PAO DOCE C/ QUEIJO KG": { rende: 30, ing: [
+    {d:"ACUCAR",q:0.100,u:"KG"},{d:"AGUA",q:0.436,u:"LT"},
+    {d:"FARINHA DE TRIGO",q:1.058,u:"KG"},{d:"FERMENTO FRESCO",q:0.031,u:"KG"},
+    {d:"MARGARINA",q:0.062,u:"KG"},{d:"MELHORADOR",q:0.010,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.093,u:"KG"},{d:"QUEIJO MINAS",q:0.115,u:"KG"},
+    {d:"SAL",q:0.010,u:"KG"} ]},
+  "PAO DOCE COMPRIDO KG": { rende: 30, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:30,u:"UN"},{d:"SACO LISO PP 25X50CM",q:30,u:"UN"},
+    {d:"ACUCAR",q:0.100,u:"KG"},{d:"AGUA",q:0.436,u:"LT"},
+    {d:"FARINHA DE TRIGO",q:1.058,u:"KG"},{d:"FERMENTO FRESCO",q:0.031,u:"KG"},
+    {d:"MARGARINA",q:0.062,u:"KG"},{d:"MELHORADOR",q:0.010,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.093,u:"KG"},{d:"SAL",q:0.010,u:"KG"} ]},
+  "PAO DOCE REDONDO KG": { rende: 30, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:30,u:"UN"},{d:"SACO LISO PP 25X50CM",q:30,u:"UN"},
+    {d:"ACUCAR",q:0.100,u:"KG"},{d:"AGUA",q:0.436,u:"LT"},
+    {d:"FARINHA DE TRIGO",q:1.058,u:"KG"},{d:"FERMENTO FRESCO",q:0.031,u:"KG"},
+    {d:"MARGARINA",q:0.062,u:"KG"},{d:"MELHORADOR",q:0.010,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.093,u:"KG"},{d:"SAL",q:0.010,u:"KG"} ]},
+  "PAO FRANCES CONGELADO KG": { rende: 569, ing: [
+    {d:"ACUCAR",q:0.221,u:"KG"},{d:"AGUA",q:13.000,u:"LT"},
+    {d:"EMULSIFICANTE",q:0.022,u:"KG"},{d:"FARINHA DE TRIGO",q:18.421,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.184,u:"KG"},{d:"MELHORADOR",q:0.221,u:"KG"},
+    {d:"SAL",q:0.295,u:"KG"} ]},
+  "PASTEL FEIRA PIZZA": { rende: 24, ing: [
+    {d:"AGUA",q:0.300,u:"LT"},{d:"APRESUNTADO",q:0.180,u:"KG"},
+    {d:"FARINHA DE TRIGO",q:0.500,u:"KG"},{d:"MUSSARELA",q:0.180,u:"KG"},
+    {d:"OLEO SOJA",q:0.045,u:"KG"},{d:"OREGANO",q:0.005,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.060,u:"KG"},{d:"SAL",q:0.007,u:"KG"} ]},
+  "PUDIM DE LEITE 700G": { rende: 6, ing: [
+    {d:"MINI TORTA G32M 750G",q:6,u:"UN"},{d:"CALDA P/PUDIM",q:0.480,u:"KG"},
+    {d:"LEITE EM PO",q:1.275,u:"KG"},{d:"LEITE INTEGRAL",q:3.000,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.900,u:"KG"},{d:"ACUCAR REFINADO",q:1.200,u:"KG"} ]},
+  "ROCAMBOLE DOCE DE LEITE KG": { rende: 16, ing: [
+    {d:"BANDEJA ISOPOR B02",q:1,u:"UN"},{d:"DOCE DE LEITE",q:1.400,u:"KG"},
+    {d:"FARINHA DE TRIGO",q:0.400,u:"KG"},{d:"FERMENTO EM PO QUIMICO",q:0.020,u:"KG"},
+    {d:"OVOS BRANCOS",q:1.000,u:"KG"},{d:"ACUCAR REFINADO",q:0.550,u:"KG"} ]},
+  "ROSCA DE BATATA KG": { rende: 31, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:30,u:"UN"},{d:"SACO LISO 20X40CM",q:30,u:"UN"},
+    {d:"ACUCAR",q:1.000,u:"KG"},{d:"ANTIMOFO",q:0.020,u:"KG"},
+    {d:"BATATA",q:1.500,u:"KG"},{d:"CORANTE AMARELO OURO",q:0.005,u:"KG"},
+    {d:"FARINHA DE TRIGO",q:4.900,u:"KG"},{d:"FERMENTO FRESCO",q:0.100,u:"KG"},
+    {d:"LEITE INTEGRAL",q:0.700,u:"KG"},{d:"MARGARINA",q:0.200,u:"KG"},
+    {d:"MELHORADOR",q:0.125,u:"KG"},{d:"OVOS BRANCOS",q:0.600,u:"KG"},
+    {d:"SAL",q:0.050,u:"KG"} ]},
+  "ROSCA DE COCO 300G": { rende: 40, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:40,u:"UN"},{d:"SACO LISO 25X35CM",q:40,u:"UN"},
+    {d:"ACUCAR",q:1.200,u:"KG"},{d:"AGUA",q:1.250,u:"LT"},
+    {d:"COCO",q:1.700,u:"KG"},{d:"FARINHA DE TRIGO",q:5.500,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.250,u:"KG"},{d:"LEITE INTEGRAL",q:2.000,u:"KG"},
+    {d:"MARGARINA",q:0.500,u:"KG"},{d:"MELHORADOR",q:0.100,u:"KG"},
+    {d:"OLEO SOJA",q:0.900,u:"KG"},{d:"OVOS BRANCOS",q:0.350,u:"KG"},
+    {d:"SAL",q:0.075,u:"KG"},{d:"ACUCAR REFINADO",q:0.200,u:"KG"} ]},
+  "ROSCA DE CREME C/CHOCOLATE 300G": { rende: 8, ing: [
+    {d:"ACUCAR",q:1.200,u:"KG"},{d:"AGUA",q:1.000,u:"LT"},
+    {d:"CREME CONFEITEIRO",q:0.090,u:"KG"},{d:"FARINHA DE TRIGO",q:5.500,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.250,u:"KG"},{d:"GOTAS DE CHOCOLATE",q:0.040,u:"KG"},
+    {d:"LEITE INTEGRAL",q:2.000,u:"KG"},{d:"MELHORADOR",q:0.100,u:"KG"},
+    {d:"OLEO SOJA",q:0.900,u:"KG"},{d:"OVOS BRANCOS",q:0.350,u:"KG"},
+    {d:"SAL",q:0.075,u:"KG"} ]},
+  "ROSCA DE LARANJA KG": { rende: 26, ing: [
+    {d:"ACUCAR",q:0.350,u:"KG"},{d:"CORANTE AMARELO OURO",q:0.005,u:"KG"},
+    {d:"ESSENCIA DE LARANJA",q:0.005,u:"KG"},{d:"FARINHA DE TRIGO",q:3.000,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.300,u:"KG"},{d:"LEITE INTEGRAL",q:0.500,u:"KG"},
+    {d:"MARGARINA",q:0.250,u:"KG"},{d:"OVOS BRANCOS",q:0.480,u:"KG"},
+    {d:"SAL",q:0.030,u:"KG"} ]},
+  "ROSCA SALGADA KG": { rende: 16, ing: [
+    {d:"ACUCAR",q:0.400,u:"KG"},{d:"AGUA",q:0.400,u:"LT"},
+    {d:"APRESUNTADO",q:0.400,u:"KG"},{d:"CEBOLINHA",q:0.010,u:"KG"},
+    {d:"FARINHA DE TRIGO",q:2.000,u:"KG"},{d:"FERMENTO FRESCO",q:0.090,u:"KG"},
+    {d:"LEITE INTEGRAL",q:0.400,u:"KG"},{d:"MELHORADOR",q:0.100,u:"KG"},
+    {d:"MUSSARELA",q:0.400,u:"KG"},{d:"OLEO SOJA",q:0.300,u:"KG"},
+    {d:"OVOS BRANCOS",q:0.300,u:"KG"},{d:"REQUEIJAO",q:0.050,u:"KG"},
+    {d:"SAL",q:0.035,u:"KG"} ]},
+  "SAMANTILHA CATALAO 170G": { rende: 12, ing: [
+    {d:"FECHO PLASTIFICADO 7CM",q:12,u:"UN"},{d:"SACO LISO 20X34CM",q:12,u:"UN"},
+    {d:"ACUCAR GRANULADO",q:0.150,u:"KG"},{d:"FARINHA DE TRIGO",q:0.300,u:"KG"},
+    {d:"FUBA DE CANJICA",q:0.300,u:"KG"},{d:"LEITE INTEGRAL",q:1.000,u:"KG"},
+    {d:"MARGARINA",q:0.500,u:"KG"},{d:"OVOS BRANCOS",q:0.900,u:"KG"} ]},
+
+  "HAMBURGAO 210G": { rende: 15, ing: [
+    {d:"BANDEJA ISOPOR B01",q:15,u:"UN"},{d:"APRESUNTADO",q:0.445,u:"KG"},
+    {d:"CARNE DE HAMBURGUER FRANGO",q:0.840,u:"KG"},{d:"FERMENTO FRESCO",q:0.026,u:"KG"},
+    {d:"ITAFLEX",q:1.228,u:"KG"},{d:"MUSSARELA",q:0.500,u:"KG"},
+    {d:"REQUEIJAO",q:0.150,u:"KG"} ]},
+  "MINI SANDUICHE ENROLADO KG": { rende: 102, ing: [
+    {d:"AGUA",q:0.450,u:"LT"},{d:"APRESUNTADO",q:0.746,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.060,u:"KG"},{d:"MIST. PAO DE MULTIMASSAS",q:1.000,u:"KG"},
+    {d:"MUSSARELA",q:0.594,u:"KG"} ]},
+  "PASTEL FEIRA CARNE": { rende: 24, ing: [
+    {d:"ACEM",q:0.720,u:"KG"},{d:"FARINHA DE TRIGO",q:1.000,u:"KG"},
+    {d:"OLEO SOJA",q:0.090,u:"KG"},{d:"OVOS BRANCOS",q:0.060,u:"KG"},
+    {d:"SAL",q:0.015,u:"KG"} ]},
+  "PASTEL FEIRA QUEIJO": { rende: 24, ing: [
+    {d:"FARINHA DE TRIGO",q:1.000,u:"KG"},{d:"MUSSARELA",q:0.720,u:"KG"},
+    {d:"OLEO SOJA",q:0.090,u:"KG"},{d:"OVOS BRANCOS",q:0.060,u:"KG"},
+    {d:"SAL",q:0.015,u:"KG"} ]},
+  "SANDUICHE BAURU 100G": { rende: 6, ing: [
+    {d:"BANDEJA ISOPOR B01",q:6,u:"UN"},{d:"AGUA",q:0.246,u:"LT"},
+    {d:"APRESUNTADO",q:0.090,u:"KG"},{d:"FERMENTO FRESCO",q:0.011,u:"KG"},
+    {d:"ITAFLEX",q:0.491,u:"KG"},{d:"MUSSARELA",q:0.120,u:"KG"},
+    {d:"REQUEIJAO",q:0.300,u:"KG"} ]},
+  "SONHO DOCE LEITE 90G": { rende: 15, ing: [
+    {d:"AGUA",q:0.250,u:"LT"},{d:"DOCE DE LEITE",q:0.750,u:"KG"},
+    {d:"FERMENTO FRESCO",q:0.060,u:"KG"},{d:"ITAFLEX",q:0.500,u:"KG"},
+    {d:"ACUCAR IMPALPAVEL",q:0.040,u:"KG"} ]}
+};
+
+
+function gerarSeparacao(){
+  const items = getItemsDia();
+  if(!items.length){alert('Selecione o dia primeiro.');return;}
+
+  // Filtrar apenas itens que precisam ser produzidos e têm receita
+  const aProduzir = items.filter(it=>{
+    const pm = Math.max(0, it.ideal_mil - getEstoque(it.nome,'mil'));
+    const pr = Math.max(0, it.ideal_reg - getEstoque(it.nome,'reg'));
+    return (pm+pr) > 0 && RECEITAS[it.nome];
+  });
+
+  if(!aProduzir.length){
+    alert('Nenhum item com receita cadastrada precisa ser produzido hoje.');
+    return;
+  }
+
+  // Montar cards
+  const d=new Date();
+  const dd=String(d.getDate()).padStart(2,'0');
+  const mm=String(d.getMonth()+1).padStart(2,'0');
+  const yyyy=d.getFullYear();
+
+  document.getElementById('sep-vazia').style.display='none';
+  document.getElementById('sep-content').style.display='block';
+  document.getElementById('sep-titulo').textContent=`Separação de Matéria Prima — ${dd}/${mm}/${yyyy}`;
+  document.getElementById('sep-subtitulo').textContent=`${aProduzir.length} itens com receita`;
+
+  const cards = aProduzir.map(it=>{
+    const rec = RECEITAS[it.nome];
+    const pm = Math.max(0, it.ideal_mil - getEstoque(it.nome,'mil'));
+    const pr = Math.max(0, it.ideal_reg - getEstoque(it.nome,'reg'));
+    const tot = pm+pr;
+    const numReceitas = Math.ceil(tot/rec.rende*2)/2; // arredonda para 0.5 acima
+    const frac = numReceitas % 1 === 0.5;
+    const recLabel = frac ? numReceitas.toFixed(1)+'x (½ receita)' : numReceitas.toFixed(1)+'x';
+    const recColor = numReceitas >= 1.5 ? '#A32D2D' : '#1D9E75';
+
+    const rows = rec.ing.map(ing=>{
+      const qtdTotal = (ing.q * numReceitas);
+      const qtdFmt = qtdTotal % 1 === 0 ? qtdTotal.toFixed(0) : qtdTotal.toFixed(3).replace(/\.?0+$/,'');
+      return `<tr>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f0ec">${ing.d}</td>
+        <td class="sep-ing-qtd" style="padding:5px 8px;border-bottom:1px solid #f0f0ec;text-align:right;font-weight:600;color:#185FA5">${qtdFmt} ${ing.u}</td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="sep-card">
+      <div class="sep-card-header">
+        <div>
+          <div class="sep-card-nome">${it.nome}</div>
+          <div class="sep-card-rende" style="color:#666;font-size:11px;margin-top:2px">
+            Rende ${rec.rende} un. por receita &bull; Total a produzir: <b>${tot}</b> un.
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="sep-card-receitas" style="color:${recColor}">${recLabel}</div>
+          ${frac?'<div style="font-size:10px;color:#888;margin-top:2px">Atenção: meia receita</div>':''}
+        </div>
+      </div>
+      <table class="sep-ing-table">
+        <thead><tr>
+          <th style="padding:4px 8px;background:#f4f4f0;color:#666;font-weight:500;border-bottom:1px solid #e5e5e0">Ingrediente / Embalagem</th>
+          <th style="padding:4px 8px;background:#f4f4f0;color:#666;font-weight:500;border-bottom:1px solid #e5e5e0;text-align:right">Quantidade</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  document.getElementById('sep-cards').innerHTML = cards;
+  switchTab('separacao');
 }
 
 const mapAmanha={0:null,1:'ter',2:'qua',3:'qui',4:'sex',5:'sab',6:null};
