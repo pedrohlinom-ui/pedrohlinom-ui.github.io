@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pedidos Horti – Catalão</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --verde: #1a6b2e;
+    --verde-claro: #2d9e47;
+    --verde-bg: #e8f5ec;
+    --amarelo: #f7c325;
+    --cinza1: #f2f4f3;
+    --cinza2: #dde4df;
+    --texto: #1a2b1e;
+    --branco: #ffffff;
+    --sombra: 0 2px 12px rgba(0,0,0,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--cinza1);
+    color: var(--texto);
+    min-height: 100vh;
+  }
+  header {
+    background: var(--verde);
+    color: var(--branco);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--sombra);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: .5px; }
+  header span { font-size: .8rem; opacity: .8; }
+  .badge { background: var(--amarelo); color: #333; font-size: .7rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 99px; margin-left: 8px; vertical-align: middle; }
+
+  #auth-panel {
+    max-width: 480px; margin: 80px auto; background: var(--branco);
+    border-radius: 16px; padding: 40px 32px; text-align: center;
+    box-shadow: var(--sombra);
+  }
+  #auth-panel h2 { color: var(--verde); margin-bottom: 12px; }
+  #auth-panel p { color: #555; margin-bottom: 28px; font-size: .95rem; line-height: 1.5; }
+  #auth-panel .logo { font-size: 3rem; margin-bottom: 16px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--verde); color: var(--branco);
+    border: none; border-radius: 8px; padding: 12px 24px;
+    font-size: 1rem; font-weight: 600; cursor: pointer;
+    transition: background .2s, transform .1s;
+  }
+  .btn:hover { background: var(--verde-claro); }
+  .btn:active { transform: scale(.98); }
+  .btn.salvar { background: var(--amarelo); color: #333; font-size: 1rem; padding: 10px 28px; }
+  .btn.salvar:hover { background: #e6b400; }
+  .btn.reload { background: transparent; color: var(--verde); border: 2px solid var(--verde); }
+  .btn.reload:hover { background: var(--verde-bg); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  #app { display: none; padding: 20px 16px 40px; max-width: 1100px; margin: 0 auto; }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .toolbar h2 { flex: 1; font-size: 1.1rem; color: var(--verde); }
+
+  .tab-nav { display: flex; gap: 4px; margin-bottom: 0; }
+  .tab-btn {
+    background: var(--cinza2); border: none; border-radius: 8px 8px 0 0;
+    padding: 9px 22px; font-size: .95rem; font-weight: 600; cursor: pointer;
+    color: #555; transition: background .15s, color .15s;
+  }
+  .tab-btn.ativo { background: var(--verde); color: var(--branco); }
+
+  .card {
+    background: var(--branco); border-radius: 0 12px 12px 12px;
+    box-shadow: var(--sombra); overflow: hidden;
+  }
+
+  .search-bar {
+    padding: 12px 16px; border-bottom: 1px solid var(--cinza2);
+  }
+  .search-bar input {
+    width: 100%; padding: 8px 14px; border: 1.5px solid var(--cinza2);
+    border-radius: 8px; font-size: .95rem; outline: none;
+    transition: border-color .2s;
+  }
+  .search-bar input:focus { border-color: var(--verde-claro); }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  thead tr { background: var(--verde); color: var(--branco); }
+  thead th { padding: 10px 10px; text-align: center; font-weight: 600; white-space: nowrap; }
+  thead th.left { text-align: left; }
+  tbody tr { border-bottom: 1px solid var(--cinza1); transition: background .1s; }
+  tbody tr:hover { background: var(--verde-bg); }
+  tbody tr.sem-pedido { opacity: .55; }
+  tbody td { padding: 7px 10px; vertical-align: middle; }
+  tbody td.produto { font-weight: 500; }
+  tbody td.centro { text-align: center; }
+  tbody td.cod { color: #888; font-size: .8rem; text-align: center; }
+  
+  input.pedido {
+    width: 68px; padding: 5px 8px; border: 1.5px solid var(--cinza2);
+    border-radius: 6px; text-align: center; font-size: .95rem;
+    font-weight: 600; color: var(--texto); background: var(--cinza1);
+    transition: border-color .2s, background .2s;
+  }
+  input.pedido:focus {
+    outline: none; border-color: var(--verde-claro); background: var(--branco);
+  }
+  input.pedido.tem-valor { background: #d4edda; border-color: var(--verde); }
+
+  .tag { display: inline-block; font-size: .7rem; padding: 1px 7px;
+    border-radius: 99px; font-weight: 700; background: #fff3cd; color: #856404; margin-left: 4px; }
+  .tag.oferta { background: #fce4ec; color: #c62828; }
+
+  .footer-salvar {
+    padding: 16px 20px; border-top: 1px solid var(--cinza2);
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .footer-salvar .resumo { flex: 1; font-size: .9rem; color: #444; }
+  .footer-salvar .resumo strong { color: var(--verde); }
+
+  #status {
+    padding: 8px 16px; border-radius: 8px; font-size: .9rem;
+    display: none; margin-left: 8px;
+  }
+  #status.ok { background: #d4edda; color: #155724; display: inline-block; }
+  #status.erro { background: #f8d7da; color: #721c24; display: inline-block; }
+  #status.loading { background: #fff3cd; color: #856404; display: inline-block; }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc;
+    border-top-color: var(--verde); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loader-overlay {
+    position: fixed; inset: 0; background: rgba(255,255,255,.75);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; z-index: 200; font-size: 1rem; color: var(--verde); display: none;
+  }
+  .loader-overlay .big-spinner {
+    width: 48px; height: 48px; border: 4px solid #ccc; border-top-color: var(--verde);
+    border-radius: 50%; animation: spin .8s linear infinite;
+  }
+
+  @media (max-width: 600px) {
+    table { font-size: .82rem; }
+    input.pedido { width: 56px; }
+    .btn { padding: 10px 16px; font-size: .9rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🥦 Pedidos Horti <span class="badge">Catalão</span></h1>
+  </div>
+  <span id="user-email"></span>
+</header>
+
+<!-- Auth -->
+<div id="auth-panel">
+  <div class="logo">🛒</div>
+  <h2>Supermercados Catalão</h2>
+  <p>Faça login com sua conta Google para acessar e preencher os pedidos de hortifrúti da semana.</p>
+  <button class="btn" id="btn-login" onclick="handleLogin()">
+    <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.05 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.55-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+    Entrar com Google
+  </button>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div class="toolbar">
+    <h2 id="titulo-planilha">Horti Junho 2026</h2>
+    <button class="btn reload" onclick="carregarPlanilha()">↻ Recarregar</button>
+    <button class="btn salvar" id="btn-salvar" onclick="salvarPlanilha()" disabled>💾 Salvar no Drive</button>
+    <span id="status"></span>
+  </div>
+
+  <div class="tab-nav">
+    <button class="tab-btn ativo" id="tab-seg" onclick="trocarAba('seg')">Segunda</button>
+    <button class="tab-btn" id="tab-qua" onclick="trocarAba('qua')">Quarta</button>
+  </div>
+
+  <div class="card">
+    <div class="search-bar">
+      <input type="text" id="busca" placeholder="🔍 Buscar produto..." oninput="filtrarTabela()">
+    </div>
+    <div class="table-wrap">
+      <table id="tabela">
+        <thead>
+          <tr>
+            <th class="left">Código</th>
+            <th class="left">Produto</th>
+            <th>Peso/Cx</th>
+            <th style="background:#1e5c29">🏪 Loja 1<br><small>Pedido</small></th>
+            <th>Loja 1<br><small>Recebido</small></th>
+            <th style="background:#1e5c29">🏪 Loja 2<br><small>Pedido</small></th>
+            <th>Loja 2<br><small>Recebido</small></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="footer-salvar">
+      <div class="resumo" id="resumo-pedidos">—</div>
+      <button class="btn salvar" onclick="salvarPlanilha()" id="btn-salvar2" disabled>💾 Salvar no Drive</button>
+    </div>
+  </div>
+</div>
+
+<div class="loader-overlay" id="loader">
+  <div class="big-spinner"></div>
+  <div id="loader-msg">Carregando...</div>
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────
+const FILE_ID = '1UvvLYHYBLdb7n712SV1fPv36nx7jp_G6';
+const CLIENT_ID = ''; // Será preenchido pelo usuário ou uso de token existente
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+// Token do Google (obtido via OAuth)
+let gToken = null;
+let workbook = null;
+let abaAtual = 'seg'; // 'seg' ou 'qua'
+let dadosSeg = []; // Array de linhas da aba Segunda
+let dadosQua = []; // Array de linhas da aba Quarta
+let modificado = false;
+
+// ─── AUTH ─────────────────────────────────────────────────────────
+function handleLogin() {
+  // Usar Google Identity Services (GIS) sem chave hardcoded
+  // Abre popup OAuth via URL
+  const redirectUri = window.location.href.split('?')[0];
+  const state = Math.random().toString(36).substr(2);
+  sessionStorage.setItem('oauth_state', state);
+  
+  // Tentar pegar token salvo
+  const savedToken = sessionStorage.getItem('gtoken');
+  if (savedToken) {
+    gToken = savedToken;
+    iniciarApp();
+    return;
+  }
+
+  // Verificar se há token na URL (retorno do OAuth)
+  const hash = window.location.hash;
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.replace('#','?'));
+    const token = params.get('access_token');
+    if (token) {
+      gToken = token;
+      sessionStorage.setItem('gtoken', token);
+      window.location.hash = '';
+      iniciarApp();
+      return;
+    }
+  }
+
+  // Precisamos do Client ID - pedir ao usuário
+  mostrarModalClientId();
+}
+
+// ─── MODAL PARA CLIENT ID ─────────────────────────────────────────
+function mostrarModalClientId() {
+  const savedClientId = localStorage.getItem('gClientId');
+  const cid = savedClientId || prompt(
+    'Para conectar ao Google Drive, informe o Client ID OAuth do seu projeto Google Cloud.\n\n' +
+    'Se não tiver, use a opção de TOKEN DIRETO abaixo (deixe vazio e pressione OK):'
+  );
+  
+  if (cid === null) return; // Cancelou
+  
+  if (cid.trim()) {
+    // Tem Client ID - fazer OAuth
+    localStorage.setItem('gClientId', cid.trim());
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(cid.trim())}&` +
+      `redirect_uri=${encodeURIComponent(window.location.href.split('#')[0])}&` +
+      `response_type=token&` +
+      `scope=${encodeURIComponent(SCOPES)}&` +
+      `prompt=select_account`;
+    window.location.href = authUrl;
+  } else {
+    // Sem Client ID - pedir token direto
+    const token = prompt(
+      'Cole aqui um Access Token do Google com acesso ao Drive.\n\n' +
+      'Obtenha em: https://developers.google.com/oauthplayground'
+    );
+    if (token && token.trim()) {
+      gToken = token.trim();
+      sessionStorage.setItem('gtoken', gToken);
+      iniciarApp();
+    }
+  }
+}
+
+// Verificar token na URL ao carregar
+window.addEventListener('load', () => {
+  const hash = window.location.hash;
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.replace('#','?'));
+    const token = params.get('access_token');
+    if (token) {
+      gToken = token;
+      sessionStorage.setItem('gtoken', token);
+      window.location.hash = '';
+      iniciarApp();
+      return;
+    }
+  }
+  const savedToken = sessionStorage.getItem('gtoken');
+  if (savedToken) {
+    gToken = savedToken;
+    iniciarApp();
+  }
+});
+
+// ─── INICIAR APP ──────────────────────────────────────────────────
+function iniciarApp() {
+  document.getElementById('auth-panel').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  carregarPlanilha();
+}
+
+// ─── CARREGAR PLANILHA DO DRIVE ───────────────────────────────────
+async function carregarPlanilha() {
+  mostrarLoader('Carregando planilha do Google Drive...');
+  setStatus('loading', '⏳ Carregando...');
+  
+  try {
+    // Baixar o arquivo como ArrayBuffer
+    const resp = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${FILE_ID}?alt=media`,
+      { headers: { Authorization: `Bearer ${gToken}` } }
+    );
+    
+    if (resp.status === 401) {
+      sessionStorage.removeItem('gtoken');
+      gToken = null;
+      esconderLoader();
+      document.getElementById('auth-panel').style.display = 'block';
+      document.getElementById('app').style.display = 'none';
+      alert('Sessão expirada. Faça login novamente.');
+      return;
+    }
+    
+    if (!resp.ok) throw new Error(`Erro HTTP ${resp.status}`);
+    
+    const buffer = await resp.arrayBuffer();
+    workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+    
+    // Buscar nome do usuário
+    try {
+      const userResp = await fetch(
+        'https://www.googleapis.com/oauth2/v2/userinfo',
+        { headers: { Authorization: `Bearer ${gToken}` } }
+      );
+      if (userResp.ok) {
+        const u = await userResp.json();
+        document.getElementById('user-email').textContent = u.name || u.email || '';
+      }
+    } catch(e) {}
+    
+    processarWorkbook();
+    renderizarTabela();
+    setStatus('ok', '✅ Planilha carregada');
+    setTimeout(() => setStatus('', ''), 3000);
+    
+  } catch(e) {
+    console.error(e);
+    setStatus('erro', '❌ Erro ao carregar. ' + e.message);
+  } finally {
+    esconderLoader();
+  }
+}
+
+// ─── PROCESSAR PLANILHA ───────────────────────────────────────────
+function processarWorkbook() {
+  // Identificar abas
+  const sheets = workbook.SheetNames;
+  console.log('Abas encontradas:', sheets);
+  
+  // A planilha pode ter uma única aba com duas seções (SEGUNDA e QUARTA)
+  // ou duas abas separadas. Vamos checar o conteúdo.
+  const primeiraAba = workbook.Sheets[sheets[0]];
+  const dados = XLSX.utils.sheet_to_json(primeiraAba, { header: 1, defval: '' });
+  
+  // Encontrar separadores SEGUNDA e QUARTA
+  let idxSeg = -1, idxQua = -1;
+  dados.forEach((row, i) => {
+    const c0 = String(row[0] || '').toUpperCase();
+    const c1 = String(row[1] || '').toUpperCase();
+    if (c0.includes('SEGUNDA') || c1.includes('SEGUNDA')) idxSeg = i;
+    if (c0.includes('QUARTA') || c1.includes('QUARTA')) idxQua = i;
+  });
+  
+  // Se não encontrou separador, tentar por abas
+  if (idxSeg === -1 && sheets.length >= 2) {
+    // Duas abas separadas
+    dadosSeg = processarAba(workbook.Sheets[sheets[0]]);
+    dadosQua = processarAba(workbook.Sheets[sheets[1]]);
+  } else {
+    // Uma aba com duas seções
+    const secSeg = idxSeg >= 0 ? dados.slice(idxSeg) : dados;
+    const secQua = idxQua >= 0 ? dados.slice(idxQua) : [];
+    
+    // Separar as seções
+    if (idxSeg >= 0 && idxQua >= 0) {
+      const sliceSeg = dados.slice(idxSeg, idxQua);
+      const sliceQua = dados.slice(idxQua);
+      dadosSeg = linhasParaProdutos(sliceSeg);
+      dadosQua = linhasParaProdutos(sliceQua);
+    } else if (idxSeg >= 0) {
+      dadosSeg = linhasParaProdutos(dados.slice(idxSeg));
+      dadosQua = [];
+    } else {
+      dadosSeg = linhasParaProdutos(dados);
+      dadosQua = [];
+    }
+  }
+  
+  modificado = false;
+  habilitarSalvar(false);
+  
+  // Ajustar tabs se não há quarta
+  if (dadosQua.length === 0) {
+    document.getElementById('tab-qua').style.display = 'none';
+    abaAtual = 'seg';
+  }
+}
+
+function processarAba(sheet) {
+  const dados = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  return linhasParaProdutos(dados);
+}
+
+function linhasParaProdutos(rows) {
+  const produtos = [];
+  let headerEncontrado = false;
+  
+  // Colunas esperadas: CÓDIGO(0), PRODUTO(1), PESO(2), PEDIDO_L1(3), RECEBIDO_L1(4), PEDIDO_L2(5), RECEBIDO_L2(6)
+  // Mas o header real pode variar, então vamos pular linhas de header/data
+  
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const c1 = String(row[1] || '').trim().toUpperCase();
+    
+    // Pular linhas de cabeçalho, data, totais, vazias
+    if (!c1) continue;
+    if (c1 === 'PRODUTO') { headerEncontrado = true; continue; }
+    if (c1.includes('TOTAL') || c1.includes('DATA:')) continue;
+    if (c1.includes('SEGUNDA') || c1.includes('QUARTA')) continue;
+    
+    // Linha de produto
+    const codigo = String(row[0] || '').trim();
+    const produto = String(row[1] || '').trim();
+    const peso = row[2];
+    const pedL1 = row[3];
+    const recL1 = row[4];
+    const pedL2 = row[5];
+    const recL2 = row[6];
+    
+    if (!produto) continue;
+    
+    // Detectar tags especiais (coluna 12 ou além)
+    const tag = String(row[12] || row[11] || '').trim();
+    
+    produtos.push({
+      codigo,
+      produto,
+      peso: peso !== undefined ? peso : '',
+      pedL1: pedL1 !== undefined && pedL1 !== '' ? pedL1 : '',
+      recL1: recL1 !== undefined && recL1 !== '' ? recL1 : '',
+      pedL2: pedL2 !== undefined && pedL2 !== '' ? pedL2 : '',
+      recL2: recL2 !== undefined && recL2 !== '' ? recL2 : '',
+      precoVenda: row[11] || '',
+      tag,
+      rowIdx: i,
+    });
+  }
+  
+  return produtos;
+}
+
+// ─── RENDERIZAR TABELA ────────────────────────────────────────────
+function renderizarTabela() {
+  const dados = abaAtual === 'seg' ? dadosSeg : dadosQua;
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  
+  if (dados.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#888">Nenhum produto encontrado</td></tr>';
+    return;
+  }
+  
+  dados.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    const temPedido = item.pedL1 !== '' || item.pedL2 !== '';
+    if (!temPedido) tr.classList.add('sem-pedido');
+    
+    const tagHtml = item.tag ? `<span class="tag ${item.tag.toLowerCase().includes('oferta') ? 'oferta' : ''}">${item.tag}</span>` : '';
+    
+    tr.innerHTML = `
+      <td class="cod">${item.codigo}</td>
+      <td class="produto">${item.produto}${tagHtml}</td>
+      <td class="centro">${item.peso}</td>
+      <td class="centro">
+        <input type="number" class="pedido" id="pedL1_${idx}" 
+          value="${item.pedL1}" min="0" step="0.5"
+          onchange="atualizarValor('pedL1', ${idx}, this.value)"
+          oninput="marcarModificado(this)">
+      </td>
+      <td class="centro" style="color:#888;font-size:.85rem">${item.recL1 !== '' ? item.recL1 : '—'}</td>
+      <td class="centro">
+        <input type="number" class="pedido" id="pedL2_${idx}"
+          value="${item.pedL2}" min="0" step="0.5"
+          onchange="atualizarValor('pedL2', ${idx}, this.value)"
+          oninput="marcarModificado(this)">
+      </td>
+      <td class="centro" style="color:#888;font-size:.85rem">${item.recL2 !== '' ? item.recL2 : '—'}</td>
+    `;
+    tbody.appendChild(tr);
+    
+    // Destacar campos com valor
+    ['pedL1', 'pedL2'].forEach(campo => {
+      const val = campo === 'pedL1' ? item.pedL1 : item.pedL2;
+      if (val !== '') {
+        document.getElementById(`${campo}_${idx}`)?.classList.add('tem-valor');
+      }
+    });
+  });
+  
+  atualizarResumo();
+}
+
+function marcarModificado(input) {
+  modificado = true;
+  habilitarSalvar(true);
+  if (input.value && parseFloat(input.value) > 0) {
+    input.classList.add('tem-valor');
+  } else {
+    input.classList.remove('tem-valor');
+  }
+  atualizarResumo();
+}
+
+function atualizarValor(campo, idx, valor) {
+  const dados = abaAtual === 'seg' ? dadosSeg : dadosQua;
+  dados[idx][campo] = valor === '' ? '' : parseFloat(valor) || '';
+  modificado = true;
+  habilitarSalvar(true);
+}
+
+function atualizarResumo() {
+  const dados = abaAtual === 'seg' ? dadosSeg : dadosQua;
+  let comPedido = 0, totalL1 = 0, totalL2 = 0;
+  
+  // Coletar valores atuais dos inputs
+  dados.forEach((item, idx) => {
+    const elL1 = document.getElementById(`pedL1_${idx}`);
+    const elL2 = document.getElementById(`pedL2_${idx}`);
+    const v1 = elL1 ? (parseFloat(elL1.value) || 0) : (parseFloat(item.pedL1) || 0);
+    const v2 = elL2 ? (parseFloat(elL2.value) || 0) : (parseFloat(item.pedL2) || 0);
+    if (v1 > 0 || v2 > 0) comPedido++;
+    totalL1 += v1;
+    totalL2 += v2;
+  });
+  
+  document.getElementById('resumo-pedidos').innerHTML =
+    `<strong>${comPedido}</strong> itens pedidos — ` +
+    `Loja 1: <strong>${totalL1.toFixed(1)}</strong> cx/kg — ` +
+    `Loja 2: <strong>${totalL2.toFixed(1)}</strong> cx/kg`;
+}
+
+// ─── FILTRAR TABELA ───────────────────────────────────────────────
+function filtrarTabela() {
+  const busca = document.getElementById('busca').value.toLowerCase();
+  const trs = document.querySelectorAll('#tbody tr');
+  trs.forEach(tr => {
+    const texto = tr.textContent.toLowerCase();
+    tr.style.display = texto.includes(busca) ? '' : 'none';
+  });
+}
+
+// ─── TROCAR ABA ───────────────────────────────────────────────────
+function trocarAba(aba) {
+  // Salvar valores atuais antes de trocar
+  coletarValoresAtuais();
+  
+  abaAtual = aba;
+  document.getElementById('tab-seg').classList.toggle('ativo', aba === 'seg');
+  document.getElementById('tab-qua').classList.toggle('ativo', aba === 'qua');
+  document.getElementById('busca').value = '';
+  renderizarTabela();
+}
+
+function coletarValoresAtuais() {
+  const dados = abaAtual === 'seg' ? dadosSeg : dadosQua;
+  dados.forEach((item, idx) => {
+    const elL1 = document.getElementById(`pedL1_${idx}`);
+    const elL2 = document.getElementById(`pedL2_${idx}`);
+    if (elL1) item.pedL1 = elL1.value !== '' ? (parseFloat(elL1.value) || '') : '';
+    if (elL2) item.pedL2 = elL2.value !== '' ? (parseFloat(elL2.value) || '') : '';
+  });
+}
+
+// ─── SALVAR NO DRIVE ─────────────────────────────────────────────
+async function salvarPlanilha() {
+  coletarValoresAtuais();
+  mostrarLoader('Salvando no Google Drive...');
+  setStatus('loading', '⏳ Salvando...');
+  
+  try {
+    // Reconstruir o workbook com os dados atualizados
+    const newWb = XLSX.utils.book_new();
+    const sheets = workbook.SheetNames;
+    
+    if (sheets.length >= 2) {
+      // Duas abas
+      atualizarSheet(workbook.Sheets[sheets[0]], dadosSeg);
+      atualizarSheet(workbook.Sheets[sheets[1]], dadosQua);
+      XLSX.utils.book_append_sheet(newWb, workbook.Sheets[sheets[0]], sheets[0]);
+      XLSX.utils.book_append_sheet(newWb, workbook.Sheets[sheets[1]], sheets[1]);
+    } else {
+      // Uma aba - reconstruir
+      atualizarSheetUnica(workbook.Sheets[sheets[0]]);
+      XLSX.utils.book_append_sheet(newWb, workbook.Sheets[sheets[0]], sheets[0]);
+    }
+    
+    // Converter para blob
+    const xlsxBlob = workbook2Blob(workbook);
+    
+    // Upload via Drive API (PATCH multipart)
+    const metadata = { name: 'HORTIFRUTI_JUNHO_2026.xlsx' };
+    const formData = new FormData();
+    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    formData.append('file', xlsxBlob, 'HORTIFRUTI_JUNHO_2026.xlsx');
+    
+    const resp = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${FILE_ID}?uploadType=multipart`,
+      {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${gToken}` },
+        body: formData
+      }
+    );
+    
+    if (resp.status === 401) {
+      sessionStorage.removeItem('gtoken');
+      throw new Error('Token expirado. Faça login novamente.');
+    }
+    
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error(`Erro ao salvar: ${resp.status} – ${err}`);
+    }
+    
+    modificado = false;
+    habilitarSalvar(false);
+    setStatus('ok', '✅ Salvo com sucesso!');
+    setTimeout(() => setStatus('', ''), 4000);
+    
+  } catch(e) {
+    console.error(e);
+    setStatus('erro', '❌ ' + e.message);
+  } finally {
+    esconderLoader();
+  }
+}
+
+function workbook2Blob(wb) {
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
+function atualizarSheet(sheet, dados) {
+  // Buscar o range atual e atualizar as células de PEDIDO
+  const ref = sheet['!ref'];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  
+  dados.forEach(item => {
+    const ri = item.rowIdx;
+    if (ri === undefined) return;
+    
+    // Coluna D (índice 3) = PEDIDO L1, coluna F (índice 5) = PEDIDO L2
+    const celL1 = XLSX.utils.encode_cell({ r: ri, c: 3 });
+    const celL2 = XLSX.utils.encode_cell({ r: ri, c: 5 });
+    
+    if (item.pedL1 !== '' && item.pedL1 !== null) {
+      sheet[celL1] = { t: 'n', v: parseFloat(item.pedL1) };
+    } else {
+      delete sheet[celL1];
+    }
+    if (item.pedL2 !== '' && item.pedL2 !== null) {
+      sheet[celL2] = { t: 'n', v: parseFloat(item.pedL2) };
+    } else {
+      delete sheet[celL2];
+    }
+  });
+}
+
+function atualizarSheetUnica(sheet) {
+  // Atualizar tanto os dados de segunda quanto de quarta na mesma aba
+  atualizarSheet(sheet, dadosSeg);
+  atualizarSheet(sheet, dadosQua);
+}
+
+// ─── UI HELPERS ───────────────────────────────────────────────────
+function habilitarSalvar(hab) {
+  document.getElementById('btn-salvar').disabled = !hab;
+  document.getElementById('btn-salvar2').disabled = !hab;
+}
+
+function setStatus(tipo, msg) {
+  const el = document.getElementById('status');
+  el.className = tipo ? `status ${tipo}` : '';
+  el.style.display = (tipo && msg) ? 'inline-block' : 'none';
+  if (tipo) el.className = tipo;
+  el.textContent = msg;
+}
+
+function mostrarLoader(msg) {
+  document.getElementById('loader-msg').textContent = msg || 'Aguarde...';
+  document.getElementById('loader').style.display = 'flex';
+}
+
+function esconderLoader() {
+  document.getElementById('loader').style.display = 'none';
+}
+
+// Avisar antes de fechar se há mudanças não salvas
+window.addEventListener('beforeunload', e => {
+  if (modificado) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+</script>
+</body>
+</html>
