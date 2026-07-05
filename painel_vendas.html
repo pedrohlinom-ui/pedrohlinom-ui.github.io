@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Vendas — Supermercados Catalão</title>
+<style>
+  :root{
+    --paper:#FBF8F1;
+    --kraft:#E9E0CC;
+    --kraft-dark:#D8CBA8;
+    --ink:#2B2620;
+    --ink-soft:#6B6355;
+    --green:#2F6B3E;
+    --green-bg:#E4EEE1;
+    --green-dark:#1E4A29;
+    --red:#A33B2E;
+    --red-bg:#F5E6E1;
+    --red-dark:#7A2A20;
+    --amber:#B8862E;
+    --amber-bg:#F6EEDD;
+    --line:#CBBF9F;
+    --mono: ui-monospace, "SF Mono", "Roboto Mono", "Courier New", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:0; background:var(--kraft); color:var(--ink);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:640px; margin:0 auto; padding:0 0 60px;}
+  header.top{
+    background:var(--ink); color:var(--paper); padding:22px 20px 18px;
+    text-align:center; position:relative;
+  }
+  header.top::after{
+    content:""; position:absolute; left:0; right:0; bottom:-8px; height:8px;
+    background:repeating-linear-gradient(90deg, var(--ink) 0 8px, transparent 8px 16px);
+  }
+  header.top h1{
+    margin:0; font-size:17px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase;
+  }
+  header.top p{
+    margin:6px 0 0; font-size:12px; color:#C9C2AE; letter-spacing:0.5px;
+  }
+  nav.tabs{
+    display:flex; gap:0; margin:20px 16px 0; border:1px solid var(--ink);
+    border-radius:8px; overflow:hidden;
+  }
+  nav.tabs button{
+    flex:1; padding:12px 6px; border:none; background:var(--paper); color:var(--ink-soft);
+    font-family:var(--sans); font-size:12.5px; font-weight:700; letter-spacing:0.3px;
+    cursor:pointer; border-right:1px solid var(--ink); text-transform:uppercase;
+  }
+  nav.tabs button:last-child{border-right:none;}
+  nav.tabs button.active{background:var(--ink); color:var(--paper);}
+  main{padding:16px;}
+  section.view{display:none;}
+  section.view.active{display:block;}
+  .card{
+    background:var(--paper); border:1px solid var(--line); border-radius:10px;
+    padding:18px 18px 20px; margin-bottom:16px;
+  }
+  .card h2{
+    margin:0 0 14px; font-size:14px; font-weight:700; letter-spacing:0.4px;
+    text-transform:uppercase; color:var(--ink-soft); border-bottom:1px dashed var(--line);
+    padding-bottom:10px;
+  }
+  .loja-toggle{display:flex; gap:8px; margin-bottom:14px;}
+  .loja-toggle button{
+    flex:1; padding:14px 8px; border:1.5px solid var(--ink); border-radius:8px;
+    background:var(--paper); color:var(--ink); font-family:var(--sans); font-weight:700;
+    font-size:13.5px; cursor:pointer; letter-spacing:0.2px;
+  }
+  .loja-toggle button.active{background:var(--green); border-color:var(--green); color:#fff;}
+  label.field-label{
+    display:block; font-size:11px; font-weight:700; color:var(--ink-soft);
+    text-transform:uppercase; letter-spacing:0.4px; margin:0 0 5px;
+  }
+  input[type="date"]{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:6px;
+    font-family:var(--mono); font-size:14px; background:#fff; color:var(--ink); margin-bottom:14px;
+  }
+  .fam-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:9px 0; border-bottom:1px dotted var(--line);
+  }
+  .fam-row:last-of-type{border-bottom:none;}
+  .fam-row .fam-name{font-size:13.5px; font-weight:500; flex:1;}
+  .fam-row .fam-meta{font-size:10.5px; color:var(--ink-soft); font-family:var(--mono); margin-top:2px;}
+  .fam-row input[type="number"]{
+    width:118px; padding:9px 10px; border:1px solid var(--line); border-radius:6px;
+    font-family:var(--mono); font-size:14px; text-align:right; background:#fff; color:var(--ink);
+  }
+  .fam-row input[type="number"]:focus{outline:2px solid var(--green); border-color:var(--green);}
+  .total-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-top:14px; padding-top:14px; border-top:2px solid var(--ink);
+  }
+  .total-row .label{font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px;}
+  .total-row .value{font-family:var(--mono); font-size:22px; font-weight:700;}
+  button.submit{
+    width:100%; margin-top:16px; padding:15px; background:var(--green); color:#fff;
+    border:none; border-radius:8px; font-family:var(--sans); font-size:14.5px; font-weight:700;
+    letter-spacing:0.3px; cursor:pointer; text-transform:uppercase;
+  }
+  button.submit:active{transform:scale(0.99);}
+  .hint{font-size:11.5px; color:var(--ink-soft); margin-top:8px; line-height:1.5;}
+
+  .stamp{
+    border:2px solid var(--ink); border-radius:10px; padding:18px; margin-bottom:16px;
+    background:var(--paper); position:relative;
+  }
+  .stamp .stamp-head{text-align:center; margin-bottom:14px;}
+  .stamp .stamp-head .badge{
+    display:inline-block; padding:5px 14px; border-radius:20px; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.5px;
+  }
+  .badge.hit{background:var(--green-bg); color:var(--green-dark);}
+  .badge.miss{background:var(--red-bg); color:var(--red-dark);}
+  .stamp .big-numbers{display:flex; justify-content:space-around; text-align:center; margin:14px 0;}
+  .big-numbers .col .k{font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.3px;}
+  .big-numbers .col .v{font-family:var(--mono); font-size:19px; font-weight:700; margin-top:3px;}
+  table.fam-result{width:100%; border-collapse:collapse; margin-top:8px; font-size:12.5px;}
+  table.fam-result td{padding:6px 4px; border-bottom:1px dotted var(--line);}
+  table.fam-result td.dot{width:10px;}
+  table.fam-result td.name{font-weight:500;}
+  table.fam-result td.num{font-family:var(--mono); text-align:right; white-space:nowrap;}
+  .dotmark{width:8px; height:8px; border-radius:50%; display:inline-block;}
+  .dotmark.hit{background:var(--green);}
+  .dotmark.miss{background:var(--red);}
+
+  .progress-block{margin-top:14px;}
+  .progress-block .pb-label{display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:5px; color:var(--ink-soft);}
+  .progress-bar{height:10px; background:var(--kraft); border-radius:6px; overflow:hidden; border:1px solid var(--line);}
+  .progress-bar .fill{height:100%; background:var(--green);}
+
+  select.loja-select{
+    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:6px;
+    font-family:var(--sans); font-size:13.5px; background:#fff; color:var(--ink); margin-bottom:12px;
+  }
+  table.dash{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.dash th{
+    text-align:left; font-size:10.5px; text-transform:uppercase; color:var(--ink-soft);
+    padding:6px 4px; border-bottom:1px solid var(--ink); letter-spacing:0.3px;
+  }
+  table.dash td{padding:7px 4px; border-bottom:1px dotted var(--line); font-family:var(--mono);}
+  table.dash td.name{font-family:var(--sans); font-weight:500;}
+  table.dash tr.total-line td{border-top:1.5px solid var(--ink); font-weight:700;}
+  .mini-bar{height:6px; background:var(--kraft); border-radius:3px; overflow:hidden; margin-top:4px; width:100%;}
+  .mini-bar .f{height:100%;}
+
+  .heat-wrap{overflow-x:auto;}
+  table.heat{border-collapse:collapse; font-size:11px; width:100%;}
+  table.heat th{
+    padding:6px 4px; font-size:9.5px; text-transform:uppercase; color:var(--ink-soft);
+    border-bottom:1px solid var(--ink); text-align:center; white-space:nowrap;
+  }
+  table.heat th.fam-h{text-align:left;}
+  table.heat td{padding:4px; text-align:center; font-family:var(--mono); border-bottom:1px dotted var(--line);}
+  table.heat td.fam-name{text-align:left; font-family:var(--sans); font-weight:500; white-space:nowrap; padding-right:10px;}
+  .heat-cell{border-radius:5px; padding:5px 3px; font-size:10.5px; font-weight:700;}
+  .empty-note{font-size:12px; color:var(--ink-soft); text-align:center; padding:24px 10px;}
+
+  .seg{display:flex; gap:6px; margin-bottom:14px;}
+  .seg button{
+    flex:1; padding:8px 6px; border:1px solid var(--line); border-radius:6px; background:#fff;
+    font-family:var(--sans); font-size:12px; font-weight:600; cursor:pointer; color:var(--ink-soft);
+  }
+  .seg button.active{background:var(--ink); border-color:var(--ink); color:var(--paper);}
+
+  footer.foot{text-align:center; padding:20px; font-size:10.5px; color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Supermercados Catalão</h1>
+    <p>Painel de vendas — plano de crescimento jul–dez/2026</p>
+  </header>
+
+  <nav class="tabs">
+    <button id="tab-lancar" class="active">Lançar</button>
+    <button id="tab-dashboard">Dashboard</button>
+    <button id="tab-foco">Foco da semana</button>
+  </nav>
+
+  <main>
+    <section id="view-lancar" class="view active">
+      <div class="card">
+        <h2>Loja e data</h2>
+        <div class="loja-toggle">
+          <button id="loja-regina" class="loja-btn active" data-loja="Regina">Regina</button>
+          <button id="loja-mil" class="loja-btn" data-loja="Milionários">Milionários</button>
+        </div>
+        <label class="field-label" for="data-input">Data da venda</label>
+        <input type="date" id="data-input" min="2026-07-01" max="2026-12-31">
+        <div class="hint" id="edit-hint" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h2>Venda por família</h2>
+        <div id="fam-inputs"></div>
+        <div class="total-row">
+          <span class="label">Total do dia</span>
+          <span class="value" id="total-dia">R$ 0</span>
+        </div>
+        <button class="submit" id="btn-submit">Registrar venda do dia</button>
+        <div class="hint">Preenchendo um dia já lançado, os valores são substituídos pelos novos.</div>
+      </div>
+
+      <div id="resultado-wrap"></div>
+    </section>
+
+    <section id="view-dashboard" class="view">
+      <div class="card">
+        <h2>Meta x realizado por mês</h2>
+        <div id="dash-content">Carregando...</div>
+      </div>
+    </section>
+
+    <section id="view-foco" class="view">
+      <div class="card">
+        <h2>Desempenho médio por dia da semana</h2>
+        <div class="seg" id="foco-loja-seg">
+          <button class="active" data-loja="Regina">Regina</button>
+          <button data-loja="Milionários">Milionários</button>
+        </div>
+        <div id="foco-content">Carregando...</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">Mercearia Memosil Ltda. · dados visíveis a todos os usuários deste painel</footer>
+</div>
+
+<script>
+const DATA = {"families":["Açougue","Padaria","Hortifrut","Mercearia Doce","Mercearia Salgada","Perfumaria","Bazar","Prod. Limpeza","Perecíveis","Mercearia Seca","Bebidas","Outros"],"dias":["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"],"months":["Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"],"idx":{"Regina":[0.7707,0.8993,0.9598,0.8864,1.1401,1.3699,0.9936],"Milionários":[0.8971,0.9339,0.996,0.9622,1.0564,1.3739,0.8021]},"norm":{"Regina":[31.0655,31.2134,29.9383,31.4756,29.8435,30.8247],"Milionários":[31.101,31.1595,30.0163,31.4789,29.7856,30.9785]},"metaLoja":{"Regina":[661226.05152275,691022.902158333,722162.489223846,754705.320493832,788714.630406601,824256.502935977,861400],"Milionários":[874009.73097725,913395.259342323,954555.61902748,997570.789313068,1042524.35358829,1089503.6617633,1138600]},"famBase":{"Regina":[{"nome":"Açougue","peso":2,"base":221998.85},{"nome":"Padaria","peso":2,"base":38361.53},{"nome":"Hortifrut","peso":1.7,"base":80108.68},{"nome":"Mercearia Doce","peso":1.3,"base":52583.89},{"nome":"Mercearia Salgada","peso":1.3,"base":37958.34},{"nome":"Perfumaria","peso":1.3,"base":21790.78},{"nome":"Bazar","peso":1.3,"base":15385.04},{"nome":"Prod. Limpeza","peso":1.2,"base":27199.56},{"nome":"Perecíveis","peso":1,"base":53236.86},{"nome":"Mercearia Seca","peso":1,"base":24588.97},{"nome":"Bebidas","peso":0.4,"base":86832.16},{"nome":"Outros","peso":0.3,"base":1157.39}],"Milionários":[{"nome":"Açougue","peso":2,"base":221228.9},{"nome":"Padaria","peso":2,"base":108923.18},{"nome":"Hortifrut","peso":1.7,"base":92775.56},{"nome":"Mercearia Doce","peso":1.3,"base":75160.88},{"nome":"Mercearia Salgada","peso":1.3,"base":53948.49},{"nome":"Perfumaria","peso":1.3,"base":30249.7},{"nome":"Bazar","peso":1.3,"base":27132.3},{"nome":"Prod. Limpeza","peso":1.2,"base":41122.74},{"nome":"Perecíveis","peso":1,"base":89109.17},{"nome":"Mercearia Seca","peso":1,"base":35196.53},{"nome":"Bebidas","peso":0.4,"base":96181.86},{"nome":"Outros","peso":0.3,"base":3004.4}]},"sumPeso":{"Regina":14.8,"Milionários":14.8}};
+
+function fmtR(v){
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+}
+function fmtPct(v){
+  return Math.round(v*100)+'%';
+}
+function weekdayIdx(d){ return (d.getDay()+6)%7; }
+function monthIdx(d){ return d.getMonth()-6; }
+
+function famMonthTarget(loja, mi, famI){
+  const fam = DATA.famBase[loja][famI];
+  const monthTotal = DATA.metaLoja[loja][mi+1];
+  const baseline = DATA.metaLoja[loja][0];
+  return fam.base + (fam.peso/DATA.sumPeso[loja])*(monthTotal-baseline);
+}
+function famDiaTarget(loja, dateStr, famI){
+  const d = new Date(dateStr+'T00:00:00');
+  const wd = weekdayIdx(d), mi = monthIdx(d);
+  if(mi<0||mi>5) return 0;
+  const fmt = famMonthTarget(loja, mi, famI);
+  return DATA.idx[loja][wd]/DATA.norm[loja][mi]*fmt;
+}
+function storeDiaTarget(loja, dateStr){
+  let s=0;
+  for(let i=0;i<DATA.families.length;i++) s+=famDiaTarget(loja,dateStr,i);
+  return s;
+}
+function storeMonthTarget(loja, mi){ return DATA.metaLoja[loja][mi+1]; }
+
+function todayStr(){
+  const now = new Date();
+  const y=now.getFullYear(), m=String(now.getMonth()+1).padStart(2,'0'), d=String(now.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+d;
+}
+function clampToRange(dstr){
+  if(dstr < '2026-07-01') return '2026-07-01';
+  if(dstr > '2026-12-31') return '2026-12-31';
+  return dstr;
+}
+
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzlbRZDn-f-GllucrkAO98Bk45aoxMia_hvjA5q1TDF-fei0RnwGaWeqL4Wu1702X2i/exec';
+
+let currentLoja = 'Regina';
+let allEntries = null;
+
+async function saveEntry(loja, dateStr, values, total){
+  await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({loja, dateStr, values, total})
+  });
+  allEntries = null;
+}
+async function loadEntry(loja, dateStr){
+  const entries = await loadAllEntries();
+  return entries.find(e => e.loja === loja && e.dateStr === dateStr) || null;
+}
+async function loadAllEntries(){
+  if(allEntries) return allEntries;
+  try{
+    const res = await fetch(APPS_SCRIPT_URL);
+    allEntries = await res.json();
+    if(!Array.isArray(allEntries)) allEntries = [];
+  }catch(e){ allEntries = []; }
+  return allEntries;
+}
+
+function renderFamInputs(){
+  const wrap = document.getElementById('fam-inputs');
+  wrap.innerHTML = '';
+  const dateStr = document.getElementById('data-input').value;
+  DATA.families.forEach((f,i)=>{
+    const target = dateStr ? famDiaTarget(currentLoja, dateStr, i) : 0;
+    const row = document.createElement('div');
+    row.className = 'fam-row';
+    row.innerHTML =
+      '<div><div class="fam-name">'+f+'</div><div class="fam-meta">meta: '+fmtR(target)+'</div></div>'+
+      '<input type="number" inputmode="decimal" step="0.01" min="0" placeholder="0" data-fam="'+i+'" class="fam-val">';
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll('.fam-val').forEach(inp=>{
+    inp.addEventListener('input', updateTotal);
+  });
+  updateTotal();
+}
+function updateTotal(){
+  let total=0;
+  document.querySelectorAll('.fam-val').forEach(inp=>{ total += parseFloat(inp.value)||0; });
+  document.getElementById('total-dia').textContent = fmtR(total);
+}
+
+async function onLojaOrDateChange(){
+  renderFamInputs();
+  const dateStr = document.getElementById('data-input').value;
+  if(!dateStr) return;
+  const existing = await loadEntry(currentLoja, dateStr);
+  const hint = document.getElementById('edit-hint');
+  if(existing){
+    hint.style.display='block';
+    hint.textContent = 'Já existe um lançamento para este dia. Os campos abaixo foram preenchidos — salve novamente para corrigir.';
+    document.querySelectorAll('.fam-val').forEach((inp,i)=>{ inp.value = existing.values[i] || ''; });
+    updateTotal();
+  } else {
+    hint.style.display='none';
+  }
+  document.getElementById('resultado-wrap').innerHTML='';
+}
+
+async function onSubmit(){
+  const dateStr = document.getElementById('data-input').value;
+  if(!dateStr){ alert('Escolha a data.'); return; }
+  const values = [];
+  document.querySelectorAll('.fam-val').forEach(inp=>{ values.push(parseFloat(inp.value)||0); });
+  const total = values.reduce((a,b)=>a+b,0);
+  if(total<=0){ alert('Lance ao menos um valor maior que zero.'); return; }
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  await saveEntry(currentLoja, dateStr, values, total);
+  btn.disabled = false; btn.textContent = 'Registrar venda do dia';
+  await showResultado(dateStr, values, total);
+  document.getElementById('edit-hint').style.display='none';
+}
+
+async function showResultado(dateStr, values, total){
+  const metaTotal = storeDiaTarget(currentLoja, dateStr);
+  const pct = metaTotal>0 ? total/metaTotal : 0;
+  const hit = pct>=1;
+  let famRows = '';
+  DATA.families.forEach((f,i)=>{
+    const target = famDiaTarget(currentLoja, dateStr, i);
+    const real = values[i];
+    const fpct = target>0 ? real/target : (real>0?1:0);
+    const fhit = fpct>=1;
+    famRows += '<tr><td class="dot"><span class="dotmark '+(fhit?'hit':'miss')+'"></span></td>'+
+      '<td class="name">'+f+'</td>'+
+      '<td class="num">'+fmtR(real)+'</td>'+
+      '<td class="num">'+fmtPct(fpct)+'</td></tr>';
+  });
+
+  const mi = monthIdx(new Date(dateStr+'T00:00:00'));
+  const monthTarget = storeMonthTarget(currentLoja, mi);
+  const entries = await loadAllEntries();
+  const monthPrefix = dateStr.slice(0,7);
+  const acumulado = entries.filter(e=>e.loja===currentLoja && e.dateStr.slice(0,7)===monthPrefix)
+    .reduce((sum,e)=>sum+e.total,0);
+  const acPct = monthTarget>0 ? Math.min(acumulado/monthTarget,1) : 0;
+  const falta = Math.max(monthTarget-acumulado,0);
+
+  const wrap = document.getElementById('resultado-wrap');
+  wrap.innerHTML =
+    '<div class="stamp">'+
+      '<div class="stamp-head"><span class="badge '+(hit?'hit':'miss')+'">'+(hit?'Meta do dia batida':'Abaixo da meta do dia')+'</span></div>'+
+      '<div class="big-numbers">'+
+        '<div class="col"><div class="k">Meta</div><div class="v">'+fmtR(metaTotal)+'</div></div>'+
+        '<div class="col"><div class="k">Realizado</div><div class="v">'+fmtR(total)+'</div></div>'+
+        '<div class="col"><div class="k">%Ating.</div><div class="v">'+fmtPct(pct)+'</div></div>'+
+      '</div>'+
+      '<table class="fam-result"><tbody>'+famRows+'</tbody></table>'+
+      '<div class="progress-block">'+
+        '<div class="pb-label"><span>Acumulado em '+DATA.months[mi]+' — '+currentLoja+'</span><span>'+fmtPct(acPct)+'</span></div>'+
+        '<div class="progress-bar"><div class="fill" style="width:'+(acPct*100)+'%"></div></div>'+
+        '<div class="hint">'+fmtR(acumulado)+' de '+fmtR(monthTarget)+' — faltam '+fmtR(falta)+' para bater a meta do mês.</div>'+
+      '</div>'+
+    '</div>';
+
+  refreshDashboard();
+  refreshFoco();
+}
+
+async function refreshDashboard(){
+  const el = document.getElementById('dash-content');
+  const entries = await loadAllEntries();
+  let rows = '';
+  let sumMetaAll=0, sumRealAll=0;
+  DATA.months.forEach((mname, mi)=>{
+    ['Regina','Milionários'].forEach(loja=>{
+      const meta = storeMonthTarget(loja, mi);
+      const prefix = '2026-'+String(mi+7).padStart(2,'0');
+      const real = entries.filter(e=>e.loja===loja && e.dateStr.slice(0,7)===prefix).reduce((s,e)=>s+e.total,0);
+      const pct = meta>0? real/meta:0;
+      sumMetaAll += (real>0?meta:0);
+      rows += '<tr><td class="name">'+mname+' / '+loja+'</td>'+
+        '<td>'+fmtR(meta)+'</td>'+
+        '<td>'+fmtR(real)+'</td>'+
+        '<td>'+fmtPct(pct)+'<div class="mini-bar"><div class="f" style="width:'+Math.min(pct*100,100)+'%;background:'+(pct>=1?'var(--green)':'var(--amber)')+'"></div></div></td></tr>';
+    });
+  });
+  const totalMeta = DATA.months.reduce((s,_,mi)=>s+storeMonthTarget('Regina',mi)+storeMonthTarget('Milionários',mi),0);
+  const totalReal = entries.reduce((s,e)=>s+e.total,0);
+  el.innerHTML = '<table class="dash"><thead><tr><th>Mês / loja</th><th>Meta</th><th>Realizado</th><th>%</th></tr></thead><tbody>'+
+    rows+
+    '<tr class="total-line"><td class="name">Total do período</td><td>'+fmtR(totalMeta)+'</td><td>'+fmtR(totalReal)+'</td><td>'+fmtPct(totalMeta>0?totalReal/totalMeta:0)+'</td></tr>'+
+    '</tbody></table>'+
+    (entries.length===0 ? '<div class="empty-note">Nenhum lançamento ainda. Assim que os gerentes começarem a lançar, esta tabela se preenche sozinha.</div>' : '');
+}
+
+let focoLoja = 'Regina';
+async function refreshFoco(){
+  const el = document.getElementById('foco-content');
+  const entries = await loadAllEntries();
+  const relevant = entries.filter(e=>e.loja===focoLoja);
+  if(relevant.length===0){
+    el.innerHTML = '<div class="empty-note">Sem lançamentos para '+focoLoja+' ainda. O mapa aparece conforme os dias forem lançados.</div>';
+    return;
+  }
+  const sums = {}, counts = {};
+  DATA.families.forEach((f,fi)=>{
+    for(let wd=0; wd<7; wd++){ sums[fi+'_'+wd]=0; counts[fi+'_'+wd]=0; }
+  });
+  relevant.forEach(e=>{
+    const d = new Date(e.dateStr+'T00:00:00');
+    const wd = weekdayIdx(d);
+    DATA.families.forEach((f,fi)=>{
+      const target = famDiaTarget(focoLoja, e.dateStr, fi);
+      if(target>0){
+        const pct = e.values[fi]/target;
+        sums[fi+'_'+wd]+=pct; counts[fi+'_'+wd]+=1;
+      }
+    });
+  });
+  let head = '<tr><th class="fam-h">Família</th>';
+  DATA.dias.forEach(d=>head+='<th>'+d.slice(0,3)+'</th>');
+  head+='</tr>';
+  let body='';
+  DATA.families.forEach((f,fi)=>{
+    body+='<tr><td class="fam-name">'+f+'</td>';
+    for(let wd=0; wd<7; wd++){
+      const c = counts[fi+'_'+wd];
+      if(c===0){ body+='<td>–</td>'; continue; }
+      const avg = sums[fi+'_'+wd]/c;
+      const bg = avg>=1.05?'var(--green-bg)':(avg>=0.9?'var(--amber-bg)':'var(--red-bg)');
+      const fg = avg>=1.05?'var(--green-dark)':(avg>=0.9?'var(--amber)':'var(--red-dark)');
+      body+='<td><span class="heat-cell" style="background:'+bg+';color:'+fg+'" title="'+c+' dia(s) lançado(s)">'+fmtPct(avg)+'</span></td>';
+    }
+    body+='</tr>';
+  });
+  el.innerHTML = '<div class="heat-wrap"><table class="heat">'+head+body+'</table></div><div class="hint">Cor considera todos os dias já lançados para essa família naquele dia da semana. Passe o cursor numa célula para ver quantos dias entraram na média.</div>';
+}
+
+function switchTab(tab){
+  ['lancar','dashboard','foco'].forEach(t=>{
+    document.getElementById('view-'+t).classList.toggle('active', t===tab);
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+  });
+  if(tab==='dashboard') refreshDashboard();
+  if(tab==='foco') refreshFoco();
+}
+
+document.getElementById('tab-lancar').addEventListener('click',()=>switchTab('lancar'));
+document.getElementById('tab-dashboard').addEventListener('click',()=>switchTab('dashboard'));
+document.getElementById('tab-foco').addEventListener('click',()=>switchTab('foco'));
+
+document.querySelectorAll('.loja-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.loja-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentLoja = btn.dataset.loja;
+    onLojaOrDateChange();
+  });
+});
+document.getElementById('data-input').addEventListener('change', (e)=>{
+  e.target.value = clampToRange(e.target.value);
+  onLojaOrDateChange();
+});
+document.getElementById('btn-submit').addEventListener('click', onSubmit);
+document.getElementById('foco-loja-seg').querySelectorAll('button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.getElementById('foco-loja-seg').querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    focoLoja = btn.dataset.loja;
+    refreshFoco();
+  });
+});
+
+document.getElementById('data-input').value = clampToRange(todayStr());
+renderFamInputs();
+onLojaOrDateChange();
+</script>
+</body>
+</html>
