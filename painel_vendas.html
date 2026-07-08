@@ -285,6 +285,7 @@ let allEntries = null;
 async function saveEntry(loja, dateStr, values, total){
   await fetch(APPS_SCRIPT_URL, {
     method: 'POST',
+    mode: 'no-cors',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
     body: JSON.stringify({loja, dateStr, values, total})
   });
@@ -354,10 +355,15 @@ async function onSubmit(){
   if(total<=0){ alert('Lance ao menos um valor maior que zero.'); return; }
   const btn = document.getElementById('btn-submit');
   btn.disabled = true; btn.textContent = 'Salvando...';
-  await saveEntry(currentLoja, dateStr, values, total);
-  btn.disabled = false; btn.textContent = 'Registrar venda do dia';
-  await showResultado(dateStr, values, total);
-  document.getElementById('edit-hint').style.display='none';
+  try{
+    await saveEntry(currentLoja, dateStr, values, total);
+    await showResultado(dateStr, values, total);
+    document.getElementById('edit-hint').style.display='none';
+  }catch(err){
+    alert('Não consegui salvar agora. Verifique sua internet e tente de novo. Detalhe: '+err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Registrar venda do dia';
+  }
 }
 
 async function showResultado(dateStr, values, total){
