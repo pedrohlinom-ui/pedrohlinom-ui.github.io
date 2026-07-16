@@ -283,12 +283,10 @@ let currentLoja = 'Regina';
 let allEntries = null;
 
 async function saveEntry(loja, dateStr, values, total){
-  await fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body: JSON.stringify({loja, dateStr, values, total})
+  const params = new URLSearchParams({
+    action: 'save', loja: loja, dateStr: dateStr, total: String(total), values: values.join(',')
   });
+  await fetch(APPS_SCRIPT_URL + '?' + params.toString(), { mode: 'no-cors' });
   allEntries = null;
 }
 async function loadEntry(loja, dateStr){
