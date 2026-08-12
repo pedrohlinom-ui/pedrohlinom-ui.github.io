@@ -84,6 +84,13 @@ tr:hover td{background:#fafaf8}
 .sep-ing-table td{padding:5px 8px;border-bottom:1px solid #f0f0ec}
 .sep-ing-table tr:last-child td{border-bottom:none}
 .sep-ing-qtd{font-weight:600;color:#185FA5;text-align:right}
+.sep-2col{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e0e0e0;border-radius:0 0 8px 8px;overflow:hidden}
+.sep-2col-item{display:flex;justify-content:space-between;align-items:center;padding:3px 8px;border-bottom:1px solid #f0f0ec;font-size:11px;gap:6px}
+.sep-2col-item:nth-child(4n+1),.sep-2col-item:nth-child(4n+2){background:#fff}
+.sep-2col-item:nth-child(4n+3),.sep-2col-item:nth-child(4n+4){background:#fafafa}
+.sep-col-left{border-right:1px solid #e8e8e8}
+.sep-2col-nome{color:#333;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sep-2col-qtd{font-weight:600;color:#185FA5;white-space:nowrap;flex-shrink:0}
 .transf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:1rem}
 .transf-card{border:1px solid #C3D9F5;border-radius:10px;padding:12px;background:#fff}
 .transf-card-nome{font-size:12px;font-weight:500;margin-bottom:6px}
@@ -146,7 +153,7 @@ tr:hover td{background:#fafaf8}
   <div class="loja-status" id="loja-status" style="display:none">
     <span style="font-size:11px;color:#666">Respostas encontradas:</span>
     <span id="status-mil" class="loja-tag loja-none"><i class="ti ti-clock" style="font-size:12px"></i> Milionários: aguardando</span>
-    <span id="status-reg" class="loja-tag loja-none"><i class="ti ti-clock" style="font-size:12px"></i> Regina: aguardando</span>
+    <span id="status-reg" class="loja-tag loja-none"><i class="ti ti-clock" style="font-size:12px"></i> Regina (pedido): aguardando</span>
   </div>
 
   <div class="stats-bar">
@@ -174,7 +181,7 @@ tr:hover td{background:#fafaf8}
           <th style="text-align:center">Ideal Mil.</th>
           <th style="text-align:center">Estoque Milionários</th>
           <th style="text-align:center">Ideal Reg.</th>
-          <th style="text-align:center">Estoque Regina</th>
+          <th style="text-align:center;color:#E65100">Pedido Regina</th>
           <th style="text-align:center">A produzir</th>
           <th style="text-align:center">Receitas</th>
         </tr>
@@ -312,7 +319,7 @@ function getEstoque(nome,loja){
 }
 function calcItem(it){
   const eMil=getEstoque(it.nome,'mil'),eReg=getEstoque(it.nome,'reg');
-  const prodMil=Math.max(0,it.ideal_mil-eMil),prodReg=Math.max(0,it.ideal_reg-eReg);
+  const prodMil=Math.max(0,it.ideal_mil-eMil),prodReg=eReg;
   const total=prodMil+prodReg;
   const receitas=it.rende>0?Math.ceil(total/it.rende*2)/2:0;
   return{prodMil,prodReg,total,receitas};
@@ -572,7 +579,7 @@ function gerarOrdem(){
       </div>
       <div class="ordem-card-nome">${it.nome}</div>
       <div class="ordem-card-detail">Mil.: ideal ${it.ideal_mil} / estoque ${getEstoque(it.nome,'mil')} → <b>${c.prodMil}</b></div>
-      <div class="ordem-card-detail">Reg.: ideal ${it.ideal_reg} / estoque ${getEstoque(it.nome,'reg')} → <b>${c.prodReg}</b></div>
+      <div class="ordem-card-detail">Reg.: pedido ${getEstoque(it.nome,'reg')} → <b>${c.prodReg}</b></div>
       <div class="ordem-card-detail" style="margin-top:4px;border-top:1px solid #f0f0ec;padding-top:4px">Total: ${c.total} un. • rende ${it.rende}</div>
       <div class="ordem-card-receita">${c.receitas.toFixed(1)} receita${c.receitas!==1?'s':''}</div>
     </div>`;
@@ -599,12 +606,10 @@ function gerarTransferencia(){
   if(!items.length){alert('Selecione o dia primeiro.');return;}
   // Itens com ideal_reg > 0 e transferencia > 0
   const comTransf=items.filter(it=>{
-    if(it.ideal_reg<=0)return false;
-    const estReg=getEstoque(it.nome,'reg');
-    return (it.ideal_reg - estReg) > 0;
+    return getEstoque(it.nome,'reg') > 0;
   });
   const totalUn=comTransf.reduce((sum,it)=>{
-    return sum + Math.max(0, it.ideal_reg - getEstoque(it.nome,'reg'));
+    return sum + getEstoque(it.nome,'reg');
   },0);
   document.getElementById('regina-vazia').style.display='none';
   document.getElementById('regina-content').style.display='block';
@@ -622,7 +627,7 @@ function gerarTransferencia(){
         ${it.cod?`<span style="font-size:10px;color:#aaa">#${it.cod}</span>`:'<span></span>'}
       </div>
       <div class="transf-card-nome">${it.nome}</div>
-      <div class="transf-card-detail">Ideal Regina: <b>${it.ideal_reg}</b></div>
+      <div class="transf-card-detail">Pedido Regina: <b>${getEstoque(it.nome,'reg')}</b></div>
       <div class="transf-card-detail">Estoque atual: <b>${estReg}</b></div>
       <div class="transf-card-qtd">${transf} un.</div>
     </div>`;
@@ -1163,7 +1168,7 @@ function calcMassaBase(grupo, aProduzirNomes){
   itensAtivos.forEach(nome => {
     const rec = RECEITAS[nome];
     const pm = Math.max(0, (ITEMS.find(i=>i.nome===nome)||{ideal_mil:0}).ideal_mil - getEstoque(nome,'mil'));
-    const pr = Math.max(0, (ITEMS.find(i=>i.nome===nome)||{ideal_reg:0}).ideal_reg - getEstoque(nome,'reg'));
+    const pr = getEstoque(nome,'reg');
     const tot = pm + pr;
     const nr = Math.ceil(tot/rec.rende*2)/2;
     rec.ing.forEach(ing => {
@@ -1181,7 +1186,7 @@ function gerarSeparacao(){
   if(!items.length){alert('Selecione o dia primeiro.');return;}
   const aProduzir = items.filter(it=>{
     const pm=Math.max(0,it.ideal_mil-getEstoque(it.nome,'mil'));
-    const pr=Math.max(0,it.ideal_reg-getEstoque(it.nome,'reg'));
+    const pr=getEstoque(it.nome,'reg');
     return (pm+pr)>0 && RECEITAS[it.nome];
   });
   if(!aProduzir.length){alert('Nenhum item com receita cadastrada precisa ser produzido hoje.');return;}
@@ -1256,38 +1261,38 @@ function gerarSeparacao(){
   function makeCard(it, c){
     const rec=RECEITAS[it.nome];
     const pm=Math.max(0,it.ideal_mil-getEstoque(it.nome,'mil'));
-    const pr=Math.max(0,it.ideal_reg-getEstoque(it.nome,'reg'));
+    const pr=getEstoque(it.nome,'reg');
     const tot=pm+pr;
     const nr=Math.ceil(tot/rec.rende*2)/2;
     const frac=nr%1===0.5;
     const recColor=nr>=1.5?'#A32D2D':'#1D9E75';
-    const recLabel=nr.toFixed(1)+'x'+(frac?' (meia receita)':'');
-    const emGrupo = massasAtivas.has(it.nome);
-    const rows=rec.ing.map(ing=>{
+    const recLabel=nr.toFixed(1)+'x'+(frac?' (½ rec!)':'');
+    const emGrupo=massasAtivas.has(it.nome);
+    const grupoLabel=emGrupo?` <span style="font-size:9px;color:#999">· ${massasAtivas.get(it.nome)}</span>`:'';
+    const ings=rec.ing.map(ing=>{
       const q=ing.q*nr;
       const qf=q%1===0?q.toFixed(0):parseFloat(q.toFixed(3)).toString();
-      return `<tr><td style="padding:5px 8px;border-bottom:1px solid #f0f0ec">${ing.d}</td><td style="padding:5px 8px;border-bottom:1px solid #f0f0ec;text-align:right;font-weight:600;color:#185FA5">${qf} ${ing.u}</td></tr>`;
-    }).join('');
-    const grupoLabel = emGrupo ? `<div style="font-size:10px;color:#888;margin-top:2px">Incluso em: ${massasAtivas.get(it.nome)}</div>` : '';
-    return `<div class="sep-card">
-      <div class="sep-card-header">
-        <div>
-          <div class="sep-card-nome">${it.nome}</div>
-          <div class="sep-card-rende">Rende ${rec.rende} un. por receita &bull; Total: <b>${tot}</b> un.</div>
-          ${grupoLabel}
-        </div>
+      return {d:ing.d,q:qf+' '+ing.u};
+    });
+    const mid=Math.ceil(ings.length/2);
+    const col1=ings.slice(0,mid);
+    const col2=ings.slice(mid);
+    let ingHtml='';
+    for(let i=0;i<mid;i++){
+      const a=col1[i]||{d:'',q:''};
+      const b=col2[i]||{d:'',q:''};
+      ingHtml+=`<div class="sep-2col-item sep-col-left"><span class="sep-2col-nome">${a.d}</span><span class="sep-2col-qtd">${a.q}</span></div><div class="sep-2col-item"><span class="sep-2col-nome">${b.d}</span><span class="sep-2col-qtd">${b.q}</span></div>`;
+    }
+    return `<div class="sep-card" style="margin-bottom:8px;padding:0;overflow:hidden">
+      <div class="sep-card-header" style="padding:5px 10px;margin-bottom:0">
+        <div><div class="sep-card-nome" style="font-size:12px">${it.nome}${grupoLabel}</div>
+        <div class="sep-card-rende" style="font-size:10px">Rende ${rec.rende} un. · Total: <b>${tot}</b></div></div>
         <div style="text-align:right">
-          <div class="sep-card-receitas" style="color:${recColor}">${recLabel}</div>
-          ${frac?'<div style="font-size:10px;color:#c00;margin-top:2px">Atencao: meia receita</div>':''}
+          <div class="sep-card-receitas" style="color:${recColor};font-size:16px">${recLabel}</div>
+          ${frac?'<div style="font-size:9px;color:#c00">meia rec.</div>':''}
         </div>
       </div>
-      <table class="sep-ing-table">
-        <thead><tr>
-          <th style="padding:4px 8px;background:#f4f4f0;color:#666;font-weight:500;border-bottom:1px solid #e5e5e0">Ingrediente / Embalagem</th>
-          <th style="padding:4px 8px;background:#f4f4f0;color:#666;font-weight:500;border-bottom:1px solid #e5e5e0;text-align:right">Quantidade</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
+      <div class="sep-2col">${ingHtml}</div>
     </div>`;
   }
 
